@@ -38,8 +38,11 @@ import type { Readable } from 'node:stream';
 
 export class ObjectNotFoundError extends Error {
   override readonly name = 'ObjectNotFoundError';
-  constructor(readonly key: string) {
+  // A plain field, not a constructor parameter property: `erasableSyntaxOnly` forbids those. Same public shape.
+  readonly key: string;
+  constructor(key: string) {
     super(`Object not found: ${key}`);
+    this.key = key;
   }
 }
 

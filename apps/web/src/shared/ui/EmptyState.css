@@ -1,0 +1,23 @@
+@reference "#styles/main.css";
+
+@layer components {
+  .empty-state {
+    @apply flex flex-col items-start gap-4 pbs-16 pbe-16 border-be border-rule;
+  }
+
+  .empty-state__title {
+    @apply m-0 text-title font-regular;
+
+    @variant sm {
+      @apply text-title-l;
+    }
+  }
+
+  .empty-state__text {
+    @apply m-0 text-body text-ink-muted max-inline-prose;
+  }
+
+  .empty-state__action {
+    @apply pbs-2;
+  }
+}

@@ -71,5 +71,6 @@ development). Memory alerts on the sessions instance are part of the deployment 
   attacker (256 keys) can hold roughly 120,000 provisional keys of a few hundred bytes each (tens of MB), which the
   sized `maxmemory` absorbs; the noeviction policy makes overload visible as errors instead of silent loss.
 - `markSessionActive` is called by the images and comments controllers after a `201` (frozen in ADR 0017);
-  `session.int.test.ts` asserts the cookie `Max-Age` before (24 h) and after a comment (180 days).
+  `session.int.test.ts` asserts the cookie lifetime (express-session writes `Expires`, not `Max-Age`; measured
+  against the response's `Date`) and the Redis key TTL, before (24 h) and after the session is marked active (180 days).
 - Without accounts there is still no moderation; the admin removal script in ADR 0019 is the takedown path.

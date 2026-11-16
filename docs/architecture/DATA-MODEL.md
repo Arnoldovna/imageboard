@@ -116,8 +116,10 @@ export const images = pgTable(
     createdAt: timestamp({ withTimezone: true, precision: 3 }).notNull().defaultNow(),
   },
   (t) => [
-    // Keyset pagination: ORDER BY created_at DESC, id DESC (F-01, F-04).
-    index('images_created_at_id_idx').on(t.createdAt.desc(), t.id.desc()),
+    // Keyset pagination: ORDER BY created_at DESC, id DESC (F-01, F-04). `DESC` means `DESC NULLS FIRST` in
+    // PostgreSQL; drizzle-kit's default index order is `DESC NULLS LAST`, which the planner cannot use for that
+    // ORDER BY (it adds a Sort node, B-40). The columns are NOT NULL, so null ordering is otherwise irrelevant.
+    index('images_created_at_id_idx').on(t.createdAt.desc().nullsFirst(), t.id.desc().nullsFirst()),
 
     check(
       'images_object_key_format',
@@ -165,8 +167,12 @@ export const comments = pgTable(
     createdAt: timestamp({ withTimezone: true, precision: 3 }).notNull().defaultNow(),
   },
   (t) => [
-    // FK lookup + keyset order in one index (B-40, F-27, F-31).
-    index('comments_image_id_created_at_id_idx').on(t.imageId, t.createdAt.desc(), t.id.desc()),
+    // FK lookup + keyset order in one index (B-40, F-27, F-31); NULLS FIRST as for images (no Sort node).
+    index('comments_image_id_created_at_id_idx').on(
+      t.imageId,
+      t.createdAt.desc().nullsFirst(),
+      t.id.desc().nullsFirst(),
+    ),
     check('comments_author_name_valid', singleLine(t.authorName, 1, LIMITS.authorName.max)), // 1..60
     check('comments_body_valid', multiLine(t.body, 1, LIMITS.commentBody.max)), // 1..1000
   ],
@@ -231,8 +237,8 @@ CREATE TABLE "comments" (
 );
 ALTER TABLE "comments" ADD CONSTRAINT "comments_image_id_images_id_fk"
   FOREIGN KEY ("image_id") REFERENCES "public"."images"("id") ON DELETE cascade ON UPDATE restrict;
-CREATE INDEX "images_created_at_id_idx" ON "images" USING btree ("created_at" DESC NULLS LAST, "id" DESC NULLS LAST);
-CREATE INDEX "comments_image_id_created_at_id_idx" ON "comments" USING btree ("image_id", "created_at" DESC NULLS LAST, "id" DESC NULLS LAST);
+CREATE INDEX "images_created_at_id_idx" ON "images" USING btree ("created_at" DESC NULLS FIRST, "id" DESC NULLS FIRST);
+CREATE INDEX "comments_image_id_created_at_id_idx" ON "comments" USING btree ("image_id", "created_at" DESC NULLS FIRST, "id" DESC NULLS FIRST);
 ```
 
 ## 4. Queries the repositories run

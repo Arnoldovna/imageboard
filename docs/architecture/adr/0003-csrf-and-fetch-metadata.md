@@ -22,8 +22,11 @@ cookieName: '__Host-imageboard.x-csrf-token' (secure) | 'imageboard.x-csrf-token
    `403 csrf-invalid` refreshes the session once and retries once.
 4. **Fetch Metadata guard** (defence in depth, BUGS B-03 fix): for unsafe methods, if `Sec-Fetch-Site` is present
    it must be `same-origin` or `none`; if it is absent and `Origin` is present, `Origin` must equal `APP_ORIGIN`
-   (when set) or the request's own origin (`req.protocol` + `Host`, which relies on `TRUST_PROXY`); requests with
-   neither (curl, Supertest) pass to the CSRF check. Violations → `403 cross-origin-request`.
+   (when set) or the request's own origin (`req.protocol` + `Host`, which relies on `TRUST_PROXY`, and on every
+   proxy forwarding the client's `Host` with its port: nginx sends `Host $http_host`, because `$host` drops the port
+   and `http://127.0.0.1:8080` would never match); requests with neither (curl, Supertest) pass to the CSRF check.
+   Violations → `403 cross-origin-request`. The guard reads headers only and runs before body parsing and the
+   session middleware (OVERVIEW §4.1).
 5. csrf-csrf's `EBADCSRFTOKEN` is mapped to the stable problem code `csrf-invalid` (not generic `about:blank`) so the
    client can tell it apart from `not-owner`.
 6. Cookies `SameSite=Lax`: a third layer.

@@ -10,6 +10,11 @@
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "development": "./src/testing/text-vectors.ts",
+      "types": "./dist/testing/text-vectors.d.ts",
+      "default": "./dist/testing/text-vectors.js"
     }
   },
   "scripts": {

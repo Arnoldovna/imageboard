@@ -284,7 +284,10 @@ Liveness: `200 { "status": "ok" }` while the process runs.
 ## 6. Unknown routes
 
 Any other `/api/*` path or method → `404 not-found` problem+json (F-41). Non-`/api` paths never reach the API (nginx
-serves the SPA).
+serves the SPA). Unsafe methods (POST, PUT, PATCH, DELETE) pass the fetch-metadata guard and the CSRF check before
+routing (OVERVIEW §4.1), so every mutation is protected by default and no route can be mounted without it: an unknown
+path or method answers `404` only to a request with a valid token, and `403 cross-origin-request` or
+`403 csrf-invalid` otherwise.
 
 ## 7. Endpoint matrix
 

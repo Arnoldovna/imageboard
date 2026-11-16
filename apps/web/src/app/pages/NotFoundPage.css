@@ -1,0 +1,29 @@
+@reference "#styles/main.css";
+
+/* maw empty state anatomy: one large left-aligned sentence, one muted line, one text link. */
+@layer components {
+  .not-found-page {
+    @apply flex flex-col items-start gap-4 pbs-16 pbe-16 border-be border-rule;
+  }
+
+  .not-found-page__title {
+    @apply m-0 text-title-l font-regular;
+  }
+
+  .not-found-page__text {
+    @apply m-0 text-body text-ink-muted max-inline-prose;
+  }
+
+  .not-found-page__link {
+    @apply text-body text-ink underline;
+
+    @variant hover {
+      text-decoration-thickness: var(--rule-width-strong);
+    }
+  }
+
+  /* inline-block keeps the link's underline off the arrow glyph. */
+  .not-found-page__arrow {
+    @apply inline-block me-2;
+  }
+}

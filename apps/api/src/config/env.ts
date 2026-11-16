@@ -1,3 +1,4 @@
+import { LIMITS } from '@app/shared';
 import { z } from 'zod';
 
 const MIB = 1024 * 1024;
@@ -39,12 +40,13 @@ const EnvSchema = z.object({
   MEDIA_PUBLIC_BASE_URL: z.string().min(1).default('/api/media'),
 
   // Memory buffers: capped at 20 MiB. Keep nginx API_MAX_BODY_SIZE above this value (ADR 0013).
-  UPLOAD_MAX_BYTES: int(1, 20 * MIB, 5 * MIB),
+  UPLOAD_MAX_BYTES: int(1, 20 * MIB, LIMITS.uploadMaxBytesDefault),
   UPLOAD_MAX_PIXELS: int(1, 1_000_000_000, 40_000_000),
-  UPLOAD_MAX_FRAMES: int(1, 1000, 200),
+  UPLOAD_MAX_FRAMES: int(1, 1000, LIMITS.uploadMaxFramesDefault),
   IMAGE_MAX_EDGE: int(512, 8192, 2560),
-  IMAGES_PAGE_SIZE: int(1, 50, 12),
-  COMMENTS_PAGE_SIZE: int(1, 50, 20),
+  // Defaults and caps from the shared contract (B-30): one place for every limit.
+  IMAGES_PAGE_SIZE: int(1, LIMITS.imagesPage.max, LIMITS.imagesPage.default),
+  COMMENTS_PAGE_SIZE: int(1, LIMITS.commentsPage.max, LIMITS.commentsPage.default),
 
   RATE_LIMIT_GLOBAL: rateLimit(300),
   RATE_LIMIT_IDENTITIES: rateLimit(20),

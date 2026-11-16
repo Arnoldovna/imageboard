@@ -1,9 +1,21 @@
 /*
- * Element defaults only — no classes here (except none). Tokens only.
- * Font files are imported in the JS entry (Vite) or copied to /public (CLI),
- * see the maw-design-system skill, section "Font".
+ * Element defaults only, no classes. Tokens only.
+ * Font files are imported in the JS entry (src/main.ts, maw-design-system §2).
  */
 @layer base {
+  :root {
+    /* The scrollbar keeps its space when a dialog locks scrolling below, so nothing jumps sideways (ADR 0011). */
+    scrollbar-gutter: stable;
+  }
+
+  /*
+   * Background scroll lock while any modal dialog is open (F-15, B-69): CSS only, no JS. `:root` instead of
+   * `html`, because `html:has(dialog[open])` has two type selectors (stylelint selector-max-type: 1).
+   */
+  :root:has(dialog[open]) {
+    overflow: hidden;
+  }
+
   html {
     @apply bg-paper text-ink font-sans font-regular text-body;
 
@@ -12,7 +24,7 @@
   }
 
   body {
-    @apply m-0 min-block-dvh;
+    @apply m-0 min-block-dvh bg-paper;
   }
 
   h1,
@@ -42,9 +54,15 @@
     block-size: auto;
   }
 
+  /* Focus is never removed (F-51, B-71): 2px ink outline, 4px offset, visible on paper and on every accent. */
   :focus-visible {
     outline: var(--focus-width) solid var(--color-ink);
     outline-offset: var(--focus-offset);
+  }
+
+  /* Targets of programmatic focus (main after the skip link, the "Gallery" heading after a dialog closes). */
+  [tabindex='-1']:focus:not(:focus-visible) {
+    outline: none;
   }
 
   ::selection {

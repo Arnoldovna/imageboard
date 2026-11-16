@@ -1,15 +1,18 @@
 import type { Logger } from 'pino';
 
 import { APP_SLUG } from './config/app.js';
-import type { Env } from './config/env.js';
+import { cookiesAreSecure, type Env } from './config/env.js';
 import { createDatabase } from './db/client.js';
 import { connectRedis } from './shared/redis/redis.js';
 import { redisRateLimitStores } from './shared/security/security.js';
+import { createSessionMiddleware, sessionLifetimes } from './shared/security/session.js';
 import { createS3Storage } from './shared/storage/object-storage.js';
 
 /**
- * Composition root: the only place that creates connections. Everything else receives
- * dependencies as arguments, so there are no module-level singletons to reset in tests.
+ * Composition root: the only place that creates connections (pg pool, Redis, S3). Everything else receives
+ * dependencies as arguments, so there are no module-level singletons to reset in tests. The session middleware and
+ * the limiter store factory are built here, not in `createApp`, so the test app can give each instance its own Redis
+ * prefix (ADR 0017).
  */
 export async function createContainer(env: Env, logger: Logger) {
   const database = createDatabase(env.DATABASE_URL, logger);
@@ -21,6 +24,15 @@ export async function createContainer(env: Env, logger: Logger) {
   const storage = createS3Storage(env);
 
   return {
+    db: database.db,
+    storage,
+    session: createSessionMiddleware({
+      redis,
+      secret: env.SESSION_SECRET,
+      secure: cookiesAreSecure(env),
+      prefix: APP_SLUG,
+      lifetimes: sessionLifetimes(env),
+    }),
     rateLimitStores: redisRateLimitStores(limiterRedis, APP_SLUG),
     readiness: {
       database: () => database.ping(),

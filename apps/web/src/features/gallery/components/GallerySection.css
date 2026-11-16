@@ -1,0 +1,34 @@
+@reference "#styles/main.css";
+
+/* Placeholder structure only; the gallery module (BUILD-ORDER 3.1, 4.2) owns this file. */
+@layer components {
+  .gallery-section {
+    @apply flex flex-col gap-6 pbs-12;
+  }
+
+  .gallery-section__heading {
+    @apply m-0 text-title font-regular;
+  }
+
+  .gallery-section__list {
+    @apply m-0 p-0 flex flex-col;
+
+    list-style: none;
+  }
+
+  .gallery-section__item {
+    @apply border-be border-rule;
+  }
+
+  .gallery-section__link {
+    @apply block pbs-3 pbe-3 text-title-s text-ink no-underline;
+  }
+
+  .gallery-section__placeholder {
+    @apply flex flex-col items-start gap-4;
+  }
+
+  .gallery-section__note {
+    @apply m-0 text-body text-ink-muted;
+  }
+}

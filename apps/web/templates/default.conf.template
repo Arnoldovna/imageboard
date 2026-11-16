@@ -50,7 +50,9 @@ server {
   # No gzip here: compressing responses that mix secrets and attacker input invites BREACH.
   location /api/ {
     proxy_pass http://api:3000;
-    proxy_set_header Host $host;
+    # The client's Host header as sent, port included: the API's fetch-metadata guard compares Origin
+    # (`http://127.0.0.1:8080`) with `<scheme>://<Host>` when APP_ORIGIN is unset, and `$host` drops the port.
+    proxy_set_header Host $http_host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $fwd_proto;
     proxy_set_header X-Request-Id $request_id;

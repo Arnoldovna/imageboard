@@ -161,12 +161,13 @@ TypeScript signatures of every port, module deps object and `createTestApp` are 
 ```
 x-powered-by off → trust proxy (TRUST_PROXY = hop count) → query parser 'simple' → pino-http (request id, truncated IP)
 → /api/health router (mounted before helmet, session and rate limits; JSON only; cached 3 s; not routed by nginx)
-→ helmet (strict CSP for API responses, nosniff, HSTS in prod, CORP same-origin)
+→ helmet (strict CSP for API responses, nosniff, HSTS when cookies are Secure, i.e. HTTPS, CORP same-origin)
 → /api/media router (own media limiter; no session, no CSRF, no body parsing)
 → global rate limiter (300 / 5 min / IP; before body parsing, so malformed or oversized bodies count too, ADR 0013)
+→ fetch-metadata guard (unsafe methods: Sec-Fetch-Site must be same-origin|none, else Origin = APP_ORIGIN or own origin;
+  headers only, so a cross-site request is refused before its body is parsed or its session is loaded and renewed)
 → express.json({ limit: '16kb', strict: true })            (no CORS middleware: same origin only, ADR 0003)
 → express-session (Redis store) → cookie-parser
-→ fetch-metadata guard (unsafe methods: Sec-Fetch-Site must be same-origin|none, else Origin = APP_ORIGIN or own origin)
 → GET /api/session (identity limiter only when creating an ownerId) → csrf-csrf doubleCsrfProtection (unsafe methods only)
 → /api/images/:imageId/comments, /api/comments, /api/images routers (per-route limiters, requireJson, multipart parser)
 → 404 problem handler (unknown /api/*) → central RFC 9457 error handler
@@ -283,7 +284,7 @@ imageboard/
 │   │   │   ├── features/
 │   │   │   │   ├── session/                             [S] complete in scaffold
 │   │   │   │   │   ├── index.ts · session.routes.ts · session.controller.ts · session.service.ts  (identity limiter, provisional lifetime)
-│   │   │   │   │   └── __tests__/session.int.test.ts      cookie Max-Age 24 h → 180 days after first comment
+│   │   │   │   │   └── __tests__/session.int.test.ts      cookie lifetime (Expires) + Redis TTL 24 h → 180 days
 │   │   │   │   ├── upload/                              [B] index.ts is a [S] stub with the final signature
 │   │   │   │   │   ├── index.ts                         createUploadModule(deps: UploadModuleDeps) → { port, mediaRouter } (ADR 0017)
 │   │   │   │   │   ├── upload.config.ts                 encoder settings, preview size, frame cap defaults
@@ -327,7 +328,7 @@ imageboard/
 │   │       ├── test-app.ts                              [S] createTestApp(options?: TestAppOptions) exactly as in ADR 0017 (file database, Redis prefix test-<uuid>)
 │   │       ├── fakes.ts                                 [S] createFakeStorage({ failPut?, failDelete? }) incl. etag/304, silent logger
 │   │       ├── http.ts                                  [S] agentWithSession(app) → { agent, csrfToken }
-│   │       ├── fixtures.ts                              [S] sharp-generated jpeg (with GPS EXIF)/png/apng/webp/gif (150 frames, 201 frames), svg, html-as-png, pdf, oversize
+│   │       ├── fixtures.ts                              [S] hand-encoded with Node built-ins (not sharp): jpeg (GPS EXIF)/png/apng/webp/gif (150, 201 frames), svg, html-as-png, pdf, oversize
 │   │       ├── migrations.int.test.ts                   [S] F-D1 migrate an own empty database twice
 │   │       ├── db-constraints.int.test.ts               [S] F-D3 shared text vectors as direct inserts
 │   │       ├── health.int.test.ts                       [S] F-47
@@ -677,8 +678,8 @@ random secrets and, when `.env` already exists, only **adds missing keys**: it n
 | `RATE_LIMIT_REDIS_URL`                      | `redis://…`, optional                                                         | separate limiter instance in production (ADR 0002)                                                   |
 | `COOKIE_SECURE`                             | bool, defaults to `NODE_ENV === 'production'`                                 | `Secure` + `__Host-` prefix                                                                          |
 | `SESSION_SECRET`                            | ≥ 32 chars (required)                                                         | session cookie signature                                                                             |
-| `SESSION_MAX_AGE_DAYS`                      | int 1..400, `180`                                                             | cookie max-age / Redis TTL of sessions that have posted                                              |
-| `SESSION_PROVISIONAL_HOURS`                 | int 1..168, `24`                                                              | cookie max-age / Redis TTL of sessions that never posted                                             |
+| `SESSION_MAX_AGE_DAYS`                      | int 1..400, `180`                                                             | cookie lifetime (`Expires`) / Redis TTL of sessions that have posted                                 |
+| `SESSION_PROVISIONAL_HOURS`                 | int 1..168, `24`                                                              | cookie lifetime (`Expires`) / Redis TTL of sessions that never posted                                |
 | `CSRF_SECRET`                               | ≥ 32 chars (required)                                                         | csrf-csrf HMAC                                                                                       |
 | `S3_ENDPOINT`                               | URL, optional (MinIO)                                                         | S3 client                                                                                            |
 | `S3_REGION`                                 | string, `eu-central-1`                                                        | S3 client                                                                                            |

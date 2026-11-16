@@ -5,7 +5,10 @@ export default defineConfig({
     name: 'integration:api',
     environment: 'node',
     include: ['src/**/*.int.test.ts', 'test/**/*.int.test.ts'],
+    // One Postgres + Redis per run and a migrated template database (test/global-setup.ts); every test file then gets
+    // its own clone (test/setup-database.ts). Files run in parallel (conventions §7, ADR 0015).
     globalSetup: ['./test/global-setup.ts'],
+    setupFiles: ['./test/setup-database.ts'],
     testTimeout: 30_000,
     hookTimeout: 120_000,
   },

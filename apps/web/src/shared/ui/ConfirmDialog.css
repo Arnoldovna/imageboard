@@ -1,0 +1,15 @@
+@reference "#styles/main.css";
+
+@layer components {
+  .confirm-dialog {
+    @apply flex flex-col gap-6;
+  }
+
+  .confirm-dialog__message {
+    @apply m-0 text-body max-inline-prose;
+  }
+
+  .confirm-dialog__actions {
+    @apply flex flex-wrap items-center gap-6;
+  }
+}

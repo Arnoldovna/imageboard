@@ -40,10 +40,13 @@ export function typescriptStrict(rootDir) {
 
 /**
  * Feature isolation: files inside features/<name>/ may import their own files freely, but another
- * feature only through its public entry point (index.ts). shared/, config/ and db/ never import features.
- * @param {{ files: string[], tsconfigs: string[] }} options
+ * feature only through its public entry point (index.ts). shared/, config/ and db/ never import features;
+ * scripts/ (api) and app/ (web) use features only through index.ts.
+ * `crossFeatureImports: false` (api, OVERVIEW §6) forbids features to import other features at all, not even their
+ * index.ts: the composition root injects ports instead.
+ * @param {{ files: string[], tsconfigs: string[], crossFeatureImports?: boolean }} options
  */
-export function featureBoundaries({ files, tsconfigs }) {
+export function featureBoundaries({ files, tsconfigs, crossFeatureImports = true }) {
   return {
     files,
     plugins: { boundaries },
@@ -52,10 +55,16 @@ export function featureBoundaries({ files, tsconfigs }) {
         typescript: { alwaysTryTypes: true, project: tsconfigs, noWarnOnMultipleProjects: true },
       },
       'boundaries/elements': [
+        // The Zod contract package (`@app/shared`, resolved into packages/shared). Matched on the full path and listed
+        // first, so its folder name never classifies it as an app's own `shared` element.
+        { type: 'contract', pattern: '**/packages/shared/**', partialMatch: false },
         { type: 'feature', pattern: 'features/*', capture: ['feature'] },
         { type: 'shared', pattern: 'shared' },
         { type: 'config', pattern: 'config' },
         { type: 'db', pattern: 'db' },
+        // api: seed and admin entry points (OVERVIEW §6); web: shell, router and pages.
+        { type: 'scripts', pattern: 'scripts' },
+        { type: 'app', pattern: 'app' },
       ],
     },
     rules: {
@@ -66,15 +75,31 @@ export function featureBoundaries({ files, tsconfigs }) {
           policies: [
             { allow: { to: { module: { origin: 'external' } } } },
             { allow: { dependency: { relationship: { to: 'internal' } } } },
-            {
-              from: { element: { type: 'feature' } },
-              allow: { to: { element: { type: 'feature', fileInternalPath: 'index.ts' } } },
-            },
+            // `@app/shared` (contract) is open to everyone (OVERVIEW §6).
+            { allow: { to: { element: { type: 'contract' } } } },
+            ...(crossFeatureImports
+              ? [
+                  {
+                    from: { element: { type: 'feature' } },
+                    allow: { to: { element: { type: 'feature', fileInternalPath: 'index.ts' } } },
+                  },
+                ]
+              : []),
             {
               from: { element: { types: ['feature', 'db'] } },
               allow: { to: { element: { types: ['shared', 'config', 'db'] } } },
             },
             { from: { element: { type: 'shared' } }, allow: { to: { element: { types: ['shared', 'config'] } } } },
+            // Entry points outside features use them only through their public index.ts.
+            {
+              from: { element: { types: ['scripts', 'app'] } },
+              allow: { to: { element: { type: 'feature', fileInternalPath: 'index.ts' } } },
+            },
+            {
+              from: { element: { type: 'scripts' } },
+              allow: { to: { element: { types: ['shared', 'config', 'db'] } } },
+            },
+            { from: { element: { type: 'app' } }, allow: { to: { element: { type: 'shared' } } } },
           ],
         },
       ],

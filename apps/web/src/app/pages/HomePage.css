@@ -1,0 +1,12 @@
+@reference "#styles/main.css";
+
+/*
+ * One column: the upload panel (a one-row sticky bar, its form in normal flow below it), then the gallery.
+ * This container spans the whole gallery, so the bar, which UploadPanel lifts into it with `display: contents`,
+ * stays pinned below the header while the gallery scrolls (ADR 0012, F-57). Only one row is ever pinned.
+ */
+@layer components {
+  .home-page {
+    @apply flex flex-col;
+  }
+}

@@ -1,0 +1,44 @@
+@reference "#styles/main.css";
+
+/* maw modal: 1px ink border, no radius, no shadow, flat paper backdrop at 92% (never dark glass or blur). */
+@layer components {
+  .modal-dialog {
+    @apply m-auto p-0 bg-paper text-ink inline-full max-inline-wide;
+
+    max-block-size: calc(100% - --spacing(6)); /* % of the viewport: a modal dialog is fixed */
+    border: var(--rule-width) solid var(--color-ink);
+    border-radius: 0;
+    overscroll-behavior: contain;
+
+    &::backdrop {
+      background-color: --alpha(var(--color-paper) / 92%);
+    }
+
+    @variant sm {
+      max-inline-size: min(var(--container-wide), calc(100% - --spacing(10)));
+      max-block-size: calc(100% - --spacing(10));
+    }
+  }
+
+  .modal-dialog--narrow {
+    @apply max-inline-prose;
+  }
+
+  .modal-dialog__header {
+    @apply flex items-baseline justify-between gap-6 p-5 border-be border-rule;
+  }
+
+  .modal-dialog__title {
+    @apply m-0 text-title-s font-regular;
+
+    overflow-wrap: anywhere;
+  }
+
+  .modal-dialog__close {
+    @apply shrink-0;
+  }
+
+  .modal-dialog__body {
+    @apply p-5;
+  }
+}

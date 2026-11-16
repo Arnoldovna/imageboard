@@ -1,0 +1,16 @@
+@reference "#styles/main.css";
+
+/* Placeholder structure only; the comments module (BUILD-ORDER 3.3, 4.2) owns this file. */
+@layer components {
+  .comments-section {
+    @apply flex flex-col gap-4 pbs-8;
+  }
+
+  .comments-section__heading {
+    @apply m-0 pbe-1 text-caption font-medium border-be border-ink-muted;
+  }
+
+  .comments-section__note {
+    @apply m-0 text-body text-ink-muted;
+  }
+}

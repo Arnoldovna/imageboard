@@ -57,6 +57,8 @@ HEIC photos to JPEG before handing them to the page.
 - `sharp` 0.35.5 joins the API deps; it ships prebuilt libvips for glibc (works on `node:26-slim` and distroless
   debian13) and has no install script, so `onlyBuiltDependencies` does not change.
 - CPU per upload is a few hundred ms at most; acceptable at 10 uploads/hour/IP.
-- Test fixtures are generated in `test/fixtures.ts` with sharp (JPEG with GPS EXIF and orientation 6, PNG, WebP,
-  animated GIF with 150 small frames, a GIF with 201 frames, an APNG), plus byte fixtures for SVG, HTML named `.png`,
-  PDF and a 6 MiB buffer. Nothing binary from legacy.
+- Test fixtures are hand-encoded in `test/fixtures.ts` with Node built-ins only (baseline JPEG with GPS EXIF and
+  orientation 6, zlib PNG and APNG, lossless VP8L WebP, LZW-encoded animated GIF with 150 small frames and a GIF with
+  201 frames), plus byte fixtures for SVG, HTML named `.png`, PDF and a 6 MiB buffer. Test inputs therefore never
+  depend on the library under test (sharp); they were checked with file-type and an independent decoder. Nothing
+  binary from legacy.

@@ -23,12 +23,16 @@ middleware; `express-feature-module` provides `AppError` + `toProblem`.
   client (ADR 0010).
 - Mapping in `shared/http/problem.ts`: `AppError` subclasses → their fields; `MulterError` → 413
   (`LIMIT_FILE_SIZE`), 400 `validation-failed` with `errors: [{ field: err.field, location: 'body', message: <that
-field's "too long" message> }]` (`LIMIT_FIELD_VALUE`), or 400 `malformed-request` (all other multer codes);
-  body-parser `entity.too.large` → 413, `entity.parse.failed` → 400 `malformed-request`; csrf-csrf
-  `EBADCSRFTOKEN` → 403 `csrf-invalid`; rate limiter → 429 `rate-limited`; Postgres `23503` on comment insert → 404
-  (in the repository/service, not the handler); Postgres `23514` → 400 `validation-failed` on the field named by the
-  constraint (defence in depth, logged at `warn`, ADR 0006); everything else → 500 `internal-error` with a generic
-  detail.
+field's "too long" message> }]` (`LIMIT_FIELD_VALUE`; the multipart parser attaches the message of its known
+  text parts, the handler falls back to a generic one), or 400 `malformed-request` (all other multer codes);
+  http-errors by status: body-parser 400 (`entity.parse.failed`, `request.aborted`) → 400 `malformed-request`, 413
+  (`entity.too.large`) → `payload-too-large`, 415 → `unsupported-content-type`; csrf-csrf `EBADCSRFTOKEN` → 403
+  `csrf-invalid`; Express' router `URIError` (status 400, a path parameter with broken percent-encoding) → 400
+  `malformed-request`; rate limiter → 429 `rate-limited`; Postgres `23503` on comment insert → 404 (in the
+  repository/service, not the handler); Postgres `23514` → 400 `validation-failed` on the field named by the
+  constraint (defence in depth, logged at `warn`, ADR 0006; the constraint → field/message table lives next to the
+  constraint names in `shared/errors/db-errors.ts`); everything else, including an http-error with any other status,
+  → 500 `internal-error` with a generic detail, so a status and its code always match.
 - `validate()` collects issues from params, query and body into one 400; the template's issue property `path` is
   renamed to `field` (FEATURES F-18).
 - Express 5 forwards rejected promises; handlers have no flow-control `try/catch`. `notFoundHandler` for unknown

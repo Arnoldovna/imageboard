@@ -1,0 +1,53 @@
+@reference "#styles/main.css";
+
+/* maw button: A = text with a 1px underline (2px on hover), B = outlined rectangle that inverts on hover. */
+@layer components {
+  .app-button {
+    @apply inline-flex items-center gap-2 p-0 text-body text-ink font-sans font-regular underline cursor-pointer;
+
+    background: none;
+    border: 0;
+    border-radius: 0;
+    text-decoration-thickness: var(--rule-width);
+    text-underline-offset: var(--underline-offset);
+
+    &:hover:not(:disabled) {
+      text-decoration-thickness: var(--rule-width-strong);
+    }
+
+    &:disabled {
+      @apply text-ink-muted cursor-not-allowed;
+    }
+
+    @variant motion-safe {
+      transition-property: color, background-color, text-decoration-thickness;
+      transition-duration: var(--duration-fast);
+      transition-timing-function: var(--ease-standard);
+    }
+  }
+
+  .app-button--outlined {
+    @apply pbs-3 pbe-3 ps-6 pe-6 no-underline;
+
+    border: var(--rule-width) solid var(--color-ink);
+
+    &:hover:not(:disabled) {
+      @apply bg-ink text-paper;
+    }
+  }
+
+  /* Accent field: text and border switch to on-accent, never muted text on the accent (maw §4). */
+  .app-button--accent {
+    @apply pbs-3 pbe-3 ps-6 pe-6 no-underline bg-accent text-on-accent;
+
+    border: var(--rule-width) solid var(--color-on-accent);
+
+    &:hover:not(:disabled) {
+      @apply bg-ink text-paper;
+    }
+
+    &:disabled {
+      @apply text-on-accent;
+    }
+  }
+}

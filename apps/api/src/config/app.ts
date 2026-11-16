@@ -1,6 +1,14 @@
 /** Short, lowercase repository slug. Used for cookie names, Redis key prefixes and problem types. */
 export const APP_SLUG = 'imageboard';
 
+/**
+ * App-scoped cookie name (conventions §8, ADR 0021 §7): cookies ignore ports and all three projects run on 127.0.0.1.
+ * `__Host-imageboard.<name>` when Secure, else `imageboard.<name>`.
+ */
+export function appCookieName(name: string, secure: boolean): string {
+  return `${secure ? '__Host-' : ''}${APP_SLUG}.${name}`;
+}
+
 /** Fixed rate-limit windows (ADR 0013). The budgets per window come from the environment (`RATE_LIMIT_*`). */
 export const RATE_LIMIT_WINDOWS_MS = {
   global: 5 * 60_000,

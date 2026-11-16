@@ -1,0 +1,44 @@
+@reference "#styles/main.css";
+
+/* Placeholder structure; the upload module (BUILD-ORDER 3.4, 4.2) owns this file and keeps the sticky mechanics. */
+@layer components {
+  /* No box of its own: the bar and the body become children of HomePage's container (ADR 0012). */
+  .upload-panel {
+    display: contents;
+  }
+
+  /*
+   * The only sticky element besides the header: one row. On >= sm the header is sticky too, so the bar sits below
+   * it; SiteHeader publishes its measured height as --site-header-block-size.
+   */
+  .upload-panel__bar {
+    @apply sticky flex items-center pbs-3 pbe-3 bg-paper border-be border-rule;
+
+    inset-block-start: 0;
+    z-index: var(--layer-header);
+
+    @variant sm {
+      inset-block-start: var(--site-header-block-size, 0);
+    }
+  }
+
+  .upload-panel__heading {
+    @apply m-0 text-lead font-medium;
+  }
+
+  .upload-panel__toggle {
+    @apply p-0 text-lead font-medium text-ink font-sans cursor-pointer;
+
+    background: none;
+    border: 0;
+    text-align: start;
+  }
+
+  .upload-panel__body {
+    @apply pbs-6 pbe-10 border-be border-rule;
+  }
+
+  .upload-panel__note {
+    @apply m-0 text-body text-ink-muted;
+  }
+}

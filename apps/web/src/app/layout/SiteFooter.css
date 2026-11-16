@@ -1,0 +1,39 @@
+@reference "#styles/main.css";
+
+/* maw footer: ink-muted rule on top, meta-size links, © on the end side; links shake on hover (motion-safe). */
+@layer components {
+  .site-footer {
+    @apply flex flex-wrap items-baseline justify-between gap-6 mx-3 pbs-6 pbe-8 text-meta border-bs border-ink-muted;
+
+    @variant sm {
+      @apply mx-5;
+    }
+  }
+
+  .site-footer__links {
+    @apply m-0 p-0 flex flex-wrap gap-6;
+
+    list-style: none;
+  }
+
+  .site-footer__item {
+    @apply m-0;
+  }
+
+  .site-footer__link {
+    @apply inline-block text-ink no-underline;
+
+    /* @variant hover = :hover inside @media (hover: hover), so nothing sticks after a tap. */
+    @variant hover {
+      @apply underline;
+
+      @variant motion-safe {
+        @apply animate-shake;
+      }
+    }
+  }
+
+  .site-footer__copyright {
+    @apply m-0 text-ink-muted;
+  }
+}

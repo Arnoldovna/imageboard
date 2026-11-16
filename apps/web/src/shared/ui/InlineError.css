@@ -1,0 +1,17 @@
+@reference "#styles/main.css";
+
+@layer components {
+  .inline-error {
+    @apply flex flex-wrap items-baseline gap-x-6 gap-y-2 ps-3;
+
+    border-inline-start: var(--rule-width-strong) solid var(--color-error);
+  }
+
+  .inline-error__message {
+    @apply m-0 text-body text-ink max-inline-prose;
+  }
+
+  .inline-error__retry {
+    @apply shrink-0;
+  }
+}
