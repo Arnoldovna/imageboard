@@ -35,10 +35,19 @@ var(--color-sky)` (#B8D3F3). It uses `--container-gallery-4: 72rem` ("gallery go
   `aspect-media` (16/10) frames with `object-fit: cover` on `bg-surface`, the preview rendition (ADR 0018), plus
   `width`/`height` attributes from the DTO (CLS < 0.1, F-09). Caption row = maw list row (title left, author and date
   right).
-- Tile accessible name (F-03, F-55 revised): the tile is one `<a>` with `aria-labelledby` pointing at the visible
-  title element (id from Vue's `useId()`), so its name is exactly the title. The tile `<img>` has `alt=""`, because
-  the same link already contains the title as text (WCAG technique H2: no duplicated name). Without this the computed
-  name would be "Fog over the pines Fog over the pines Marit 21 Sep 2026". The dialog image keeps `alt` = title.
+- Tile accessible name (F-03, F-55 revised): the tile is one `<a>` that holds only the preview and the visible title,
+  so its name is exactly the title. The tile `<img>` has `alt=""`, because the same link already contains the title
+  as text (WCAG technique H2: no duplicated name). Author and date follow the link as text in the same tile and
+  describe it through `aria-describedby` (id from Vue's `useId()`); a stretched `::after` on the link keeps the whole
+  tile one click target and carries the focus ring, so keyboard focus outlines the same area. The dialog image keeps
+  `alt` = title. _Phase 5 change:_ the first build put author and date
+  inside the link and named it with `aria-labelledby` → title; axe flagged that as `label-content-name-mismatch`
+  (WCAG 2.5.3 Label in Name: visible text inside a control must be part of its name), so the meta moved out of the
+  link instead of widening the name to "title author date".
+- Eager tiles (F-09, FEATURES §14 R-11): the first four tiles load eagerly on every width, i.e. the first row of the
+  widest grid. On one to three columns they are still at the top of the page, where eager loading helps the largest
+  contentful paint; deriving the count from the current column count would need layout measurement in script for no
+  visible gain.
 - Accent use: the upload panel's submit button is the single B+accent button per view; the dialog header rule and
   the current-page underline stay ink. Never text in accent colour; never muted text on the accent.
 - Colour scheme follows `prefers-color-scheme` only. **No manual dark-mode toggle.** Reason: it is optional in

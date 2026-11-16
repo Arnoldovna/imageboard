@@ -205,6 +205,74 @@ describe('S3 client timeouts (createS3Storage)', () => {
   });
 });
 
+describe('S3 client signing (createS3Storage)', () => {
+  interface SeenRequest {
+    method: string | undefined;
+    path: string;
+    host: string | undefined;
+    authorization: string | undefined;
+    contentSha256: string | undefined;
+  }
+  let server: Server;
+  let endpoint: string;
+  const seen: SeenRequest[] = [];
+
+  beforeAll(async () => {
+    // A minimal S3 stand-in that records each request and answers a PutObject with 200 and an ETag.
+    server = createServer((req, res) => {
+      seen.push({
+        method: req.method,
+        path: new URL(req.url ?? '/', 'http://stand-in').pathname,
+        host: req.headers.host,
+        authorization: req.headers.authorization,
+        contentSha256: req.headers['x-amz-content-sha256'] as string | undefined,
+      });
+      req.resume();
+      req.on('end', () => {
+        res.writeHead(200, { ETag: '"0123456789abcdef0123456789abcdef"' });
+        res.end();
+      });
+    });
+    await new Promise<void>((resolve) => {
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    endpoint = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve) => {
+      server.close(() => {
+        resolve();
+      });
+    });
+  });
+
+  it('B-36: signs with SigV4 for the configured region and sends path-style requests to the configured endpoint', async () => {
+    const storage = createS3Storage({
+      S3_ENDPOINT: endpoint,
+      S3_REGION: 'eu-central-1',
+      S3_BUCKET: 'bucket',
+      S3_ACCESS_KEY_ID: 'test-access-key',
+      S3_SECRET_ACCESS_KEY: 'test-secret',
+      S3_FORCE_PATH_STYLE: true,
+    });
+    try {
+      await storage.put('images/k.png', Uint8Array.of(1, 2, 3), 'image/png');
+    } finally {
+      storage.destroy();
+    }
+
+    expect(seen).toHaveLength(1);
+    const [put] = seen;
+    expect(put).toMatchObject({ method: 'PUT', path: '/bucket/images/k.png', host: new URL(endpoint).host });
+    // Signature V4: HMAC-SHA256 over a credential scope of date/region/service; V2 would be "AWS <key>:<sig>".
+    expect(put?.authorization).toMatch(
+      /^AWS4-HMAC-SHA256 Credential=test-access-key\/\d{8}\/eu-central-1\/s3\/aws4_request, SignedHeaders=[a-z0-9;-]*\bhost\b[a-z0-9;-]*, Signature=[0-9a-f]{64}$/,
+    );
+    expect(put?.contentSha256).toBeDefined();
+  });
+});
+
 describe('fake storage (test/fakes.ts) keeps the port contract', () => {
   async function roundTrip(storage: ObjectStorage) {
     await storage.put('images/a.png', Uint8Array.of(1, 2, 3), 'image/png');

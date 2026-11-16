@@ -6,7 +6,7 @@ const MIB = 1024 * 1024;
 const int = (min: number, max: number, fallback: number) => z.coerce.number().int().min(min).max(max).default(fallback);
 const rateLimit = (fallback: number) => int(1, 1_000_000, fallback);
 
-const EnvSchema = z.object({
+export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: int(1, 65_535, 3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),

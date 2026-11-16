@@ -18,7 +18,7 @@ export interface ImagesRouteDeps {
  * (ADR 0017); `DELETE /:id` runs `requireOwnerSession` → deletes limiter → controller.
  */
 export function createImagesRouter({ controller, parseMultipart, limiters }: ImagesRouteDeps): Router {
-  const router = Router();
+  const router = Router({ caseSensitive: true });
   router.use(noStore);
   router.get('/', controller.list);
   router.get('/:id', controller.show);

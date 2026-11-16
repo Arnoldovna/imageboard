@@ -14,7 +14,7 @@ export interface MediaRouteDeps {
  * HEAD. Any other path falls through to the app's 404 handling.
  */
 export function createMediaRouter({ controller, mediaLimiter }: MediaRouteDeps): Router {
-  const router = Router();
+  const router = Router({ caseSensitive: true });
   router.get('/images/:file', mediaLimiter, controller.original);
   router.get('/previews/:file', mediaLimiter, controller.preview);
   return router;

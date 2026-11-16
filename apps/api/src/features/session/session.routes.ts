@@ -9,7 +9,7 @@ export interface SessionRouteDeps {
 
 /** Mounted at `/api/session`, after the session middleware and the global limiter, before CSRF protection. */
 export function createSessionRouter({ controller, identityLimiter }: SessionRouteDeps): Router {
-  const router = Router();
+  const router = Router({ caseSensitive: true });
   router.get('/', controller.limitNewIdentities(identityLimiter), controller.show);
   return router;
 }

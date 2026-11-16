@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { APIRequestContext, APIResponse } from '@playwright/test';
+import { type APIRequestContext, type APIResponse, expect } from '@playwright/test';
 
 import { type FixtureFile, imageFixture } from './files.ts';
 
@@ -71,6 +71,12 @@ export interface CreateCommentInput {
   body: string;
   authorName?: string;
 }
+
+/**
+ * Postgres `integer` maximum: the largest path id the API accepts, and one no test creates (the e2e stack starts empty
+ * and stays far below it), so it names an unknown image. One above it is a 400 (F-44).
+ */
+export const MAX_ID = 2_147_483_647;
 
 /** Fictional default display name for data created by e2e helpers. */
 export const E2E_AUTHOR = 'E2E Tester';
@@ -227,4 +233,32 @@ export async function createCommentViaApi(
 export async function deleteCommentViaApi(request: APIRequestContext, id: number): Promise<void> {
   const response = await request.delete(`/api/comments/${String(id)}`, { headers: await csrfHeaders(request) });
   await expectStatus(response, 204, `DELETE /api/comments/${String(id)}`);
+}
+
+/** One field error of a `400 validation-failed` problem (API.md §2). */
+export interface FieldErrorBody {
+  field: string;
+  location: string;
+  message: string;
+}
+
+/** An RFC 9457 problem body as the API sends it (API.md §2). */
+export interface ProblemBody {
+  type: string;
+  title: string;
+  status: number;
+  detail: string;
+  code: string;
+  errors?: FieldErrorBody[];
+}
+
+/** Asserts an `application/problem+json` response with this status and code; returns the body for further checks. */
+export async function expectProblem(response: APIResponse, status: number, code: string): Promise<ProblemBody> {
+  expect(response.status(), await response.text()).toBe(status);
+  expect(response.headers()['content-type']).toMatch(/^application\/problem\+json/);
+  const problem = (await response.json()) as ProblemBody;
+  expect(problem).toMatchObject({ status, code });
+  expect(typeof problem.title).toBe('string');
+  expect(typeof problem.detail).toBe('string');
+  return problem;
 }

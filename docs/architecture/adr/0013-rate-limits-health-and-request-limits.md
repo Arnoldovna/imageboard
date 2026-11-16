@@ -54,7 +54,10 @@ unbounded check would leave one hanging call per cache window while a dependency
 - The readiness result is **cached for 3 s with a single in-flight check**: concurrent callers share one promise, so
   at most one `select 1`, one Redis check and one (billable on AWS) `HeadBucket` run per 3 s, whoever calls.
   Shutdown state bypasses the cache (503 immediately).
-- nginx **denies** `location ^~ /api/health` (`return 404`) for external callers. The compose healthcheck calls the
+- nginx **denies** `location ~* ^/api/health(?:/|$)` (`return 404`) for external callers, in any letter case; the
+  API routes case-sensitively (`case sensitive routing` for the mount paths, `Router({ caseSensitive: true })` inside
+  every router), so `/api/HEALTH` is a plain 404 there too (phase 5 security audit: a case-sensitive `^~` prefix let
+  `/api/HEALTH` through to Express). The compose healthcheck calls the
   api container directly (`node -e "fetch('http://127.0.0.1:3000/api/health')…"`, no curl in distroless), and
   `docker compose up --wait` waits on it; Playwright needs no health URL (ADR 0015). A platform load balancer must
   probe the api container, not the public origin.

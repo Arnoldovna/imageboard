@@ -5,8 +5,12 @@
  * like a stacked maw list row: title, meta (author, date), and a 1px rule that turns ink on hover, focus and press
  * (ADR 0012).
  *
- * The tile fills its grid cell and the caption takes the remaining height, so the rules of one grid row line up
- * even when a title wraps to more lines than its neighbours (editorial rhythm, no ragged baseline of rules).
+ * The tile fills its grid cell and the rule sits on the tile's end edge, so the rules of one grid row line up even
+ * when a title wraps to more lines than its neighbours (editorial rhythm, no ragged baseline of rules).
+ *
+ * The link holds only the preview and the title (its name is exactly the title, WCAG 2.5.3); the meta follows it
+ * outside the link. A stretched pseudo-element on the link covers the whole tile, so the meta is part of the one
+ * click target as well (B-68: one link per tile).
  */
 @layer components {
   /*
@@ -15,10 +19,40 @@
    * image's bytes arrive, so it would have run on an empty frame. The surface frame holds the space until then.
    */
   .image-tile {
-    @apply flex flex-col block-full text-ink no-underline;
+    @apply relative flex flex-col gap-1 block-full pbe-3 border-be border-rule;
+
+    &:has(.image-tile__link:focus-visible),
+    &:active {
+      @apply border-rule-strong;
+    }
 
     @variant motion-safe {
       @apply animate-fade-in;
+
+      transition: border-color var(--duration-fast) var(--ease-standard);
+    }
+  }
+
+  .image-tile__link {
+    @apply flex flex-col gap-3 text-ink no-underline;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+    }
+
+    /*
+     * The focus ring (base.css) goes around what the link covers, the whole tile with the meta, so keyboard users see
+     * the same target that a pointer gets; it moves from the link box to the stretched pseudo-element.
+     */
+    &:focus-visible {
+      outline: none;
+    }
+
+    &:focus-visible::after {
+      outline: var(--focus-width) solid var(--color-ink);
+      outline-offset: var(--focus-offset);
     }
   }
 
@@ -30,19 +64,6 @@
     @apply block inline-full block-full object-cover;
   }
 
-  .image-tile__caption {
-    @apply flex flex-1 flex-col gap-1 pbs-3 pbe-3 border-be border-rule;
-
-    .image-tile:focus-visible &,
-    .image-tile:active & {
-      @apply border-rule-strong;
-    }
-
-    @variant motion-safe {
-      transition: border-color var(--duration-fast) var(--ease-standard);
-    }
-  }
-
   .image-tile__title {
     @apply text-title-s font-regular;
 
@@ -50,7 +71,7 @@
   }
 
   .image-tile__meta {
-    @apply flex flex-wrap gap-x-4 gap-y-1 text-meta text-ink-muted;
+    @apply m-0 flex flex-wrap gap-x-4 gap-y-1 text-meta text-ink-muted;
   }
 
   .image-tile__author {
@@ -63,7 +84,7 @@
 
   /* Hover only on devices that can hover, so a tapped tile keeps no ink rule or shake after the dialog closes. */
   @media (hover: hover) {
-    .image-tile:hover .image-tile__caption {
+    .image-tile:hover {
       @apply border-rule-strong;
     }
 

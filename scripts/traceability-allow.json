@@ -1,0 +1,193 @@
+{
+  "$comment": "Items of docs/FEATURES.md and docs/BUGS.md proven statically (lint, stylelint, utility check, typecheck, build, CI jobs, docs) instead of by a test title; OVERVIEW §15/§17. scripts/check-traceability.mjs requires a named proof and checks that each evidence file exists and contains the given text. Add an id here only when no runtime test can prove it.",
+  "items": [
+    {
+      "id": "F-61",
+      "proof": "pnpm lint:css (stylelint: BEM, tokens only, logical properties), pnpm check:utilities (no utility classes in markup, @apply audit) and the build (Tailwind source(none)) run in CI and pnpm verify",
+      "evidence": [
+        { "file": "package.json", "contains": "\"lint:css\": \"stylelint" },
+        { "file": "package.json", "contains": "\"check:utilities\": \"node scripts/check-no-utilities.mjs" },
+        { "file": ".github/workflows/ci.yml", "contains": "pnpm check:utilities" }
+      ]
+    },
+    {
+      "id": "F-62",
+      "proof": "documented decision: the app intentionally has no real-time updates (ADR 0016); nothing to test",
+      "evidence": [{ "file": "docs/architecture/adr/0016-no-real-time-updates.md", "contains": "F-62" }]
+    },
+    {
+      "id": "B-14",
+      "proof": "Node 26 pinned (.nvmrc, engine-strict), exact dependency pins with minimumReleaseAge, Dependabot and pnpm audit --prod in audit.yml (and by hand in phase 5.3)",
+      "evidence": [
+        { "file": ".nvmrc", "contains": "26" },
+        { "file": ".npmrc", "contains": "engine-strict=true" },
+        { "file": ".github/workflows/audit.yml", "contains": "pnpm audit --prod --audit-level=high" },
+        { "file": ".github/dependabot.yml", "contains": "package-ecosystem" }
+      ]
+    },
+    {
+      "id": "B-15",
+      "proof": "root .gitignore covers dependencies, build output, env files, OS files and test artefacts; checked with git ls-files in the scaffold gate",
+      "evidence": [
+        { "file": ".gitignore", "contains": "node_modules/" },
+        { "file": ".gitignore", "contains": ".DS_Store" },
+        { "file": ".gitignore", "contains": "!.env.example" },
+        { "file": ".gitignore", "contains": "playwright-report/" }
+      ]
+    },
+    {
+      "id": "B-16",
+      "proof": "Vite production build of the Vue SFCs with dependencies from package.json, run by the CI build job",
+      "evidence": [
+        { "file": "apps/web/package.json", "contains": "\"build\": \"vite build\"" },
+        { "file": ".github/workflows/ci.yml", "contains": "pnpm build" }
+      ]
+    },
+    {
+      "id": "B-33",
+      "proof": "scripts contract incl. dev, build, test, test:e2e and verify; CI dev-setup-smoke runs pnpm dev:setup twice",
+      "evidence": [
+        { "file": "package.json", "contains": "\"verify\": \"pnpm format:check" },
+        { "file": "package.json", "contains": "\"dev:setup\": \"node scripts/dev-setup.mjs\"" },
+        { "file": ".github/workflows/ci.yml", "contains": "dev-setup-smoke" }
+      ]
+    },
+    {
+      "id": "B-50",
+      "proof": "ESLint: <script setup lang=\"ts\"> only (vue/component-api-style, vue/block-lang), one HTTP client module; Prettier format check",
+      "evidence": [
+        { "file": "apps/web/eslint.config.js", "contains": "'vue/component-api-style': ['error', ['script-setup']]" },
+        { "file": "apps/web/eslint.config.js", "contains": "'vue/block-lang'" },
+        { "file": "apps/web/src/shared/api/http.ts" }
+      ]
+    },
+    {
+      "id": "B-51",
+      "proof": "typecheck (vue-tsc, TypeScript strict) and <script setup> only, so there is no `this` to get wrong",
+      "evidence": [
+        { "file": "tsconfig.base.json", "contains": "\"strict\": true" },
+        { "file": "apps/web/package.json", "contains": "vue-tsc" },
+        { "file": "apps/web/eslint.config.js", "contains": "'vue/component-api-style'" }
+      ]
+    },
+    {
+      "id": "B-52",
+      "proof": "ESLint eslint-plugin-vue flat/recommended (includes vue/valid-v-on and vue/require-v-for-key as errors) with --max-warnings=0",
+      "evidence": [
+        { "file": "apps/web/eslint.config.js", "contains": "pluginVue.configs['flat/recommended']" },
+        { "file": "package.json", "contains": "\"lint\": \"eslint . --max-warnings=0\"" }
+      ]
+    },
+    {
+      "id": "B-53",
+      "proof": "typed defineEmits checked by vue-tsc, and vue/require-explicit-emits from eslint-plugin-vue flat/recommended",
+      "evidence": [
+        { "file": "apps/web/eslint.config.js", "contains": "pluginVue.configs['flat/recommended']" },
+        { "file": "apps/web/package.json", "contains": "vue-tsc" }
+      ]
+    },
+    {
+      "id": "B-61",
+      "proof": "Vue 3 + Vite + TypeScript SFCs in feature folders (feature boundaries linted), built in CI",
+      "evidence": [
+        { "file": "apps/web/package.json", "contains": "\"vue\": \"3." },
+        { "file": "apps/web/eslint.config.js", "contains": "featureBoundaries" },
+        { "file": ".github/workflows/ci.yml", "contains": "pnpm build" }
+      ]
+    },
+    {
+      "id": "B-62",
+      "proof": "code review in the quality gate (no commented-out code, English only), as decided in OVERVIEW §17",
+      "evidence": [{ "file": "docs/architecture/OVERVIEW.md", "contains": "| B-62 |" }]
+    },
+    {
+      "id": "B-63",
+      "proof": "code review in the quality gate (intention-revealing names), as decided in OVERVIEW §17",
+      "evidence": [{ "file": "docs/architecture/OVERVIEW.md", "contains": "| B-63 |" }]
+    },
+    {
+      "id": "B-77",
+      "proof": "stylelint selector-max-id: 0 and font-family only from --font-* tokens",
+      "evidence": [
+        { "file": "stylelint.config.mjs", "contains": "'selector-max-id': 0" },
+        { "file": "stylelint.config.mjs", "contains": "'font-family': ['/^var\\\\(--font-/'" }
+      ]
+    },
+    {
+      "id": "B-78",
+      "proof": "stylelint selector-max-compound-selectors 3, max-nesting-depth 2, selector-no-qualifying-type",
+      "evidence": [
+        { "file": "stylelint.config.mjs", "contains": "'selector-max-compound-selectors': 3" },
+        { "file": "stylelint.config.mjs", "contains": "'max-nesting-depth': [2" },
+        { "file": "stylelint.config.mjs", "contains": "'selector-no-qualifying-type'" }
+      ]
+    },
+    {
+      "id": "B-79",
+      "proof": "one AppButton block with BEM modifiers (--outlined, --accent) used by every action button; code review and stylelint BEM pattern",
+      "evidence": [
+        { "file": "apps/web/src/shared/ui/AppButton.vue", "contains": "'app-button--outlined'" },
+        { "file": "stylelint.config.mjs", "contains": "'selector-class-pattern'" }
+      ]
+    },
+    {
+      "id": "B-80",
+      "proof": "stylelint bans hex, named and functional colours and raw lengths outside tokens.css (color-no-hex, color-named, function-disallowed-list, declaration-property-value-disallowed-list)",
+      "evidence": [
+        { "file": "stylelint.config.mjs", "contains": "'color-no-hex': true" },
+        { "file": "stylelint.config.mjs", "contains": "'function-disallowed-list'" },
+        { "file": "stylelint.config.mjs", "contains": "[RAW_LENGTH]" }
+      ]
+    },
+    {
+      "id": "B-81",
+      "proof": "stylelint selector-max-type 1 and the BEM class pattern (BEM elements instead of positional element selectors); code review",
+      "evidence": [
+        { "file": "stylelint.config.mjs", "contains": "'selector-max-type': [1" },
+        { "file": "stylelint.config.mjs", "contains": "'selector-class-pattern'" }
+      ]
+    },
+    {
+      "id": "B-82",
+      "proof": "stylelint-config-standard (block-no-empty, declaration-block-no-duplicate-properties) with --max-warnings=0",
+      "evidence": [
+        { "file": "stylelint.config.mjs", "contains": "extends: ['stylelint-config-standard']" },
+        { "file": "package.json", "contains": "--max-warnings=0" }
+      ]
+    },
+    {
+      "id": "B-83",
+      "proof": "stylelint selector-class-pattern (BEM) and selector-nested-pattern (no &__element)",
+      "evidence": [
+        { "file": "stylelint.config.mjs", "contains": "'selector-class-pattern'" },
+        { "file": "stylelint.config.mjs", "contains": "'selector-nested-pattern'" }
+      ]
+    },
+    {
+      "id": "B-84",
+      "proof": "stylelint property-disallowed-list (physical properties) and raw-length ban; check:utilities rejects physical-direction utilities and off-scale spacing",
+      "evidence": [
+        { "file": "stylelint.config.mjs", "contains": "'property-disallowed-list'" },
+        { "file": "scripts/check-no-utilities.mjs", "contains": "physical-direction utility" }
+      ]
+    },
+    {
+      "id": "B-85",
+      "proof": "MIT LICENSE committed; the portfolio README (setup, screenshots in docs/media, architecture) is written in the Presentation phase (Etappe 3, portfolio-readme)",
+      "evidence": [
+        { "file": "LICENSE", "contains": "MIT License" },
+        { "file": "README.md" },
+        { "file": "docs/architecture/BUILD-ORDER.md", "contains": "portfolio-readme" }
+      ]
+    },
+    {
+      "id": "B-86",
+      "proof": "pnpm verify (format, lint, stylelint, utility check, typecheck, unit, integration, build, e2e, gitleaks) and the matching CI jobs",
+      "evidence": [
+        { "file": "package.json", "contains": "\"verify\": \"pnpm format:check && pnpm lint && pnpm lint:css" },
+        { "file": ".github/workflows/ci.yml", "contains": "pnpm test:integration" },
+        { "file": ".github/workflows/ci.yml", "contains": "gitleaks git" }
+      ]
+    }
+  ]
+}

@@ -9,7 +9,10 @@
  * - Secret keys are the ones whose name contains SECRET as a word (SESSION_SECRET, CSRF_SECRET, S3_SECRET_ACCESS_KEY).
  * - Prints key names only, never values. Running it twice leaves .env byte-identical.
  *
- * Usage: node scripts/setup-env.mjs [--env-file <path>] [--example <path>]
+ * Usage: node scripts/setup-env.mjs [--env-path <path>] [--example <path>]
+ *
+ * (Not `--env-file`: Node itself reads `--env-file` anywhere on the command line, even after the script name, and
+ * exits when that file does not exist yet.)
  */
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -100,9 +103,9 @@ export function databaseUrlMismatches(env) {
 
 function main() {
   const { values: options } = parseArgs({
-    options: { 'env-file': { type: 'string' }, example: { type: 'string' } },
+    options: { 'env-path': { type: 'string' }, example: { type: 'string' } },
   });
-  const envFile = resolve(ROOT, options['env-file'] ?? '.env');
+  const envFile = resolve(ROOT, options['env-path'] ?? '.env');
   const exampleFile = resolve(ROOT, options.example ?? '.env.example');
 
   const example = readFileSync(exampleFile, 'utf8');

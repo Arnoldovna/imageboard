@@ -35,6 +35,31 @@ describe('createMultipartParser', () => {
     });
   });
 
+  it('B-34: hands the file on as an in-memory Buffer with the exact bytes; nothing is staged on disk', async () => {
+    const bytes = Buffer.from(Array.from({ length: 64 }, (_, index) => index));
+    const inspecting = problemApp(
+      (server) => {
+        server.post('/api/images', createMultipartParser({ maxFileBytes: MAX_FILE_BYTES }), (req, res) => {
+          const { file } = req;
+          res.json({
+            isBuffer: Buffer.isBuffer(file?.buffer),
+            bytes: file === undefined ? null : [...file.buffer],
+            // Disk storage would set `path` and `destination`; memory storage never does.
+            stagedOnDisk: file !== undefined && ('path' in file || 'destination' in file),
+          });
+        });
+      },
+      { uploadMaxBytes: MAX_FILE_BYTES },
+    );
+
+    const response = await request(inspecting)
+      .post('/api/images')
+      .attach('file', bytes, { filename: 'photo.png', contentType: 'image/png' });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ isBuffer: true, bytes: [...bytes], stagedOnDisk: false });
+  });
+
   it('passes a request without a file on (file presence is checked with the fields, B-24)', async () => {
     const response = await request(app()).post('/api/images').field('title', 'No file');
 

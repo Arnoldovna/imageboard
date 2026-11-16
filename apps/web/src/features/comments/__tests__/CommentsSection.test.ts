@@ -5,6 +5,7 @@ import { createPinia, setActivePinia, type Pinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_REGION, useAnnouncerStore } from '../../../shared/a11y/announcer.store';
+import { formatDateTime } from '../../../shared/format/date';
 import CommentsSection from '../components/CommentsSection.vue';
 
 function comment(id: number, overrides: Partial<CommentDto> = {}): CommentDto {
@@ -110,6 +111,24 @@ describe('CommentsSection', () => {
     expect(articles[1]?.querySelector('time')?.getAttribute('datetime')).toBe('2026-10-06T16:40:00.000Z');
     expect(screen.getByRole('region', { name: 'Comments' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'show older comments' })).toBeNull();
+  });
+
+  it('B-60: shows each comment date as readable text in a <time> whose datetime keeps the ISO value', async () => {
+    stubFetch(page([marit, own]));
+    setup();
+
+    const list = await screen.findByRole('list');
+    const times = within(list)
+      .getAllByRole('article')
+      .map((article) => article.querySelector('time'));
+
+    expect(times.map((time) => time?.getAttribute('datetime'))).toEqual([marit.createdAt, own.createdAt]);
+    expect(times.map((time) => time?.textContent)).toEqual([
+      formatDateTime(marit.createdAt),
+      formatDateTime(own.createdAt),
+    ]);
+    // "6 Oct 2026, 17:52" in the viewer's zone, never the raw "2026-10-06T15:52:00.000Z".
+    for (const time of times) expect(time?.textContent).toMatch(/^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}$/);
   });
 
   it('shows the empty text (F-30)', async () => {

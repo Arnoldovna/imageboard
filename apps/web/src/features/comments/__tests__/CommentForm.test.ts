@@ -59,7 +59,7 @@ afterEach(() => {
   cleanup();
 });
 
-describe('CommentForm: structure (B-66, F-38)', () => {
+describe('CommentForm: structure (B-66, F-38, B-55: Name before Comment)', () => {
   it('is a real form with Name first, then Comment, both labelled, required and length-limited', () => {
     const { name, body } = setup();
 
@@ -83,7 +83,7 @@ describe('CommentForm: structure (B-66, F-38)', () => {
   });
 });
 
-describe('CommentForm: client check (F-29)', () => {
+describe('CommentForm: client check (F-29, B-55)', () => {
   it('shows both messages inline, focuses Name and sends nothing when the form is empty', async () => {
     const { user, send, name, body, submit } = setup();
 
@@ -121,7 +121,7 @@ describe('CommentForm: client check (F-29)', () => {
   });
 });
 
-describe('CommentForm: sending (F-33)', () => {
+describe('CommentForm: sending (F-33, B-55)', () => {
   it('sends the trimmed values when Enter is pressed in the name field', async () => {
     const { user, send, name, body } = setup();
 

@@ -42,11 +42,43 @@ test('F-42: home page renders with the wordmark under a strict CSP and no CSP vi
   expect(violations).toEqual([]);
 });
 
-test('F-47: /api/health is not reachable from outside (nginx answers 404)', async ({ request }) => {
-  for (const path of ['/api/health', '/api/health/live']) {
+test('F-47: /api/health is not reachable from outside, in any letter case (nginx answers 404)', async ({ request }) => {
+  for (const path of ['/api/health', '/api/health/live', '/api/HEALTH', '/api/Health/live', '/API/health']) {
     const response = await request.get(path);
     expect(response.status(), path).toBe(404);
   }
+});
+
+test("B-10: API responses carry only the API's own security headers, never a second copy of the page's", async ({
+  request,
+}) => {
+  const response = await request.get('/api/images?limit=1');
+  expect(response.status()).toBe(200);
+
+  const values = (name: string): string[] =>
+    response
+      .headersArray()
+      .filter((header) => header.name.toLowerCase() === name)
+      .map((header) => header.value);
+  const csp = values('content-security-policy');
+  expect(csp).toHaveLength(1);
+  expect(csp[0]).toMatch(/^default-src 'none'/);
+  for (const name of ['x-frame-options', 'x-content-type-options', 'referrer-policy']) {
+    expect(values(name), name).toHaveLength(1);
+  }
+});
+
+test('B-10: a response nginx generates itself under /api/ still carries the security headers', async ({ request }) => {
+  // The /api/health 404 never reaches the API, so helmet adds nothing; nginx fills in its own headers, as it does for
+  // its 413, 502 and 504 pages.
+  const response = await request.get('/api/health');
+  expect(response.status()).toBe(404);
+
+  const headers = response.headers();
+  expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
+  expect(headers['x-frame-options']).toBe('DENY');
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
 });
 
 test('B-03: behind nginx, Origin alone (no Sec-Fetch-Site) passes for this origin and fails for another', async ({

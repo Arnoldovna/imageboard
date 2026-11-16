@@ -135,7 +135,7 @@ describe('GallerySection', () => {
     expect(screen.getAllByRole('link')).toHaveLength(2);
   });
 
-  it('renders one link per tile, newest first, named exactly by the visible title (F-01, F-03, F-55, B-68)', async () => {
+  it('renders one link per tile, newest first, named exactly by the visible title with the meta beside it (F-01, F-03, F-55, B-68)', async () => {
     fetchPage.mockResolvedValueOnce(page([2, 1], null));
     await renderGallery();
 
@@ -143,12 +143,16 @@ describe('GallerySection', () => {
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['/images/2', '/images/1']);
     const tile = screen.getByRole('link', { name: 'Fog over the pines' });
     expect(tile).toBe(links[1]);
-    expect(within(tile).getByText('Fog over the pines')).toBeTruthy();
-    expect(within(tile).getByText('Marit')).toBeTruthy();
-    const time = within(tile).getByText('21 Sep 2026');
+    // The title is the link's only text, so the visible label is the whole name (WCAG 2.5.3 Label in Name).
+    expect(tile.textContent.trim()).toBe('Fog over the pines');
+    const item = tile.closest('li');
+    expect(item).not.toBeNull();
+    if (item === null) return;
+    expect(within(item).getByText('Marit')).toBeTruthy();
+    const time = within(item).getByText('21 Sep 2026');
     expect(time.tagName).toBe('TIME');
     expect(time.getAttribute('datetime')).toBe('2026-09-21T12:00:00.000Z');
-    // Author and date describe the link; ids are unique per tile.
+    // Author and date sit beside the link and describe it; ids are unique per tile.
     const description = document.getElementById(tile.getAttribute('aria-describedby') ?? '');
     expect(description?.textContent).toBe('Marit 21 Sep 2026');
     const ids = [...document.querySelectorAll('[id]')].map((element) => element.id);

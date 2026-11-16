@@ -140,7 +140,8 @@ and a catch-all 404 page.
   legacy used 9). `limit` is clamped to 1..50. Larger values are capped, not rejected.
 - **F-03** (changed) [E]: Each tile always shows the image, its title and its author name. The title is no longer
   hover-only, so touch and screen-reader users get it too (B-68). Each tile is a single link to `/images/:id`
-  whose accessible name is the image title (exactly the title: see F-55 and §14 R-05).
+  whose accessible name is the image title (exactly the title: see F-55 and §14 R-05); the link holds the preview
+  and the title, the author and date follow it in the same tile.
 - **F-04** (changed) [A][E]: A "Load more" button appends the next page using **keyset pagination**
   (`nextCursor`). Uploading or deleting images between two page requests never causes duplicates or
   skipped items in the list.
@@ -156,6 +157,7 @@ and a catch-all 404 page.
   button appears. Images that were already loaded stay visible.
 - **F-09** (new) [E]: Every `<img>` has `width`/`height` attributes (from the stored dimensions), `loading="lazy"`
   (except the first row) and `decoding="async"`. The cumulative layout shift of the gallery is < 0.1.
+  _(Annotated, §14 R-11: "first row" is the first four tiles, the first row of the widest grid, on every width.)_
 - **F-10** (new) [E]: The grid is responsive: 1 column at 320 px, up to 4 columns on wide screens. There is no
   horizontal page scroll anywhere between 320 px and 1920 px viewport width.
 
@@ -307,12 +309,14 @@ anonymous sessions instead:
   title as the dialog's heading; "Comments" as a sub-heading. Headings are never used just for font size (B-70).
 - **F-55** (new, **revised** §14 R-05) [E]: Every image has a text alternative. The dialog image uses the image title
   as `alt`. A gallery tile image uses `alt=""` because the title is already text inside the same link, and the link
-  is named by that title through `aria-labelledby` (WCAG technique H2; a title in both `alt` and text would read it
-  twice). Decorative icons use `alt=""`/`aria-hidden`. Icon-only controls have an accessible name (B-65, B-73).
+  holds nothing else, so its name is exactly that title (WCAG technique H2; a title in both `alt` and text would read
+  it twice) and its visible text is its whole name (WCAG 2.5.3 Label in Name). Decorative icons use
+  `alt=""`/`aria-hidden`. Icon-only controls have an accessible name (B-65, B-73).
 - **F-56** (new) [E]: Status changes (uploaded, deleted, comment added, errors) are announced through an
   `aria-live="polite"` region. Errors that block a form move focus to the first invalid field. _(Annotated, §14 R-04:
   while a modal dialog is open, the announcement goes to a live region inside that dialog, because the page behind a
-  modal dialog is inert.)_
+  modal dialog is inert. §14 R-12: errors are `role="alert"` messages next to the failed control or inside the
+  top-most open dialog, not polite announcements.)_
 - **F-57** (changed, **revised** §14 R-03) [E]: The upload bar may stay visible while scrolling, but only through CSS
   `position: sticky` (no scroll listener), and it causes no layout jump (B-58). The sticky part is a compact one-row
   bar with an "Upload an image" disclosure button (`aria-expanded`); the form itself opens below it in normal page
@@ -353,8 +357,8 @@ anonymous sessions instead:
 ## 14. Revisions from the architecture review
 
 The architecture critique (Etappe 1, round 1) changed or annotated these criteria; R-10 comes from the phase 3 code
-review. Each change is justified in the ADR named; the criteria above carry a "revised" or "annotated" marker
-pointing here.
+review, R-11 and R-12 from the phase 5 e2e wave. Each change is justified in the ADR named; the criteria above carry
+a "revised" or "annotated" marker pointing here.
 
 | #    | Criteria         | Change                                                                                                                                                         | ADR           |
 | ---- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
@@ -362,9 +366,11 @@ pointing here.
 | R-02 | F-40             | Extra limiters: media (1200 / 5 min), identities (20 / h), global uploads (200 / day); health not limited (not public)                                         | 0013          |
 | R-03 | F-57             | Only a one-row bar is sticky; the form opens in normal flow on every width (was: whole form sticky on ≥ md)                                                    | 0012          |
 | R-04 | F-56             | Announcements go to a live region inside the open dialog                                                                                                       | 0010, 0011    |
-| R-05 | F-03, F-55       | Tile image `alt=""`, tile link named by the title via `aria-labelledby`; dialog image keeps `alt` = title                                                      | 0012          |
+| R-05 | F-03, F-55       | Tile image `alt=""`; the tile link holds only the preview and the title (name = title), author and date beside it; dialog image keeps `alt` = title            | 0012          |
 | R-06 | §3.2, F-22, §13  | One WebP preview rendition per image; `ImageDto.previewUrl`                                                                                                    | 0018          |
 | R-07 | F-19             | APNG accepted as PNG (stored as static PNG)                                                                                                                    | 0005          |
 | R-08 | §3.2, F-47       | `/api/health` internal only, cached 3 s                                                                                                                        | 0013          |
 | R-09 | F-58             | Profile URLs in one constant to be confirmed by Marina                                                                                                         | OVERVIEW §8.3 |
 | R-10 | F-06, F-24, F-33 | "Disabled" while a request runs is `aria-disabled` (busy, clicks ignored), so the pressed button keeps focus; a reset on success keeps input entered meanwhile | 0010          |
+| R-11 | F-09             | "First row" = the first four tiles (first row of the widest grid) on every width; on 1–3 columns they are still at the top of the page                         | 0012          |
+| R-12 | F-56             | Errors are `role="alert"` (`InlineError`, form errors) beside the failed control or in the top-most dialog; status changes stay polite announcements           | 0010          |

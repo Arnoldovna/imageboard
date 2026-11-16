@@ -410,7 +410,9 @@ orchestrator runs `pnpm e2e:down` and then the full `pnpm verify` once.
 | 5.3  | sequential | `/security-review`, gitleaks, `pnpm audit --prod --audit-level=high` (by hand; not a PR check); fixes in the owning files                                  | B-01 to B-13 re-check                                             |
 
 Data rules for every spec: create own data through `e2e/support/api.ts` with `page.request` (owned by the page's
-session) or a separate request context ("foreign"); unique titles; never count- or seed-based (ADR 0015).
+session) or a separate request context ("foreign"); unique titles; never count- or seed-based (ADR 0015). Other
+workers upload at the same time, so a spec finds its tiles with `revealTiles` (`e2e/support/screens.ts`), never by
+assuming they are on the first gallery page.
 
 Traceability check: a small script (`scripts/check-traceability.mjs`, created in 5.2) greps test titles for every
 `F-xx` and `B-xx` id from `docs/FEATURES.md` and `docs/BUGS.md` and lists the missing ones; items proven statically

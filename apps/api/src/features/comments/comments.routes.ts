@@ -19,7 +19,7 @@ export interface CommentsRouteDeps {
 
 /** Mounted at `/api/images/:imageId/comments`; `mergeParams` exposes `imageId` from the mount path. */
 export function createImageCommentsRouter({ controller, limiters }: CommentsRouteDeps): Router {
-  const router = Router({ mergeParams: true });
+  const router = Router({ caseSensitive: true, mergeParams: true });
   router.use(noStore);
   router.get('/', controller.list);
   router.post('/', requireOwnerSession, limiters.comments, requireJson, controller.create);
@@ -28,7 +28,7 @@ export function createImageCommentsRouter({ controller, limiters }: CommentsRout
 
 /** Mounted at `/api/comments`. The `deletes` limiter is the instance shared with `DELETE /api/images/:id`. */
 export function createCommentsRouter({ controller, limiters }: CommentsRouteDeps): Router {
-  const router = Router();
+  const router = Router({ caseSensitive: true });
   router.use(noStore);
   router.delete('/:id', requireOwnerSession, limiters.deletes, controller.remove);
   return router;

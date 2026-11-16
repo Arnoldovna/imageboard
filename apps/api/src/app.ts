@@ -91,6 +91,10 @@ export function createApp(deps: AppDeps): Express {
   app.disable('x-powered-by');
   app.set('trust proxy', env.TRUST_PROXY);
   app.set('query parser', 'simple');
+  // Paths are case-sensitive like nginx's locations: otherwise /api/HEALTH would reach the internal health router
+  // past nginx's /api/health block (ADR 0013). This setting covers the app's own router (the mount paths) and must be
+  // set before the first app.use; every feature router is created with `caseSensitive: true` for the paths inside it.
+  app.set('case sensitive routing', true);
 
   app.use(createRequestLogger(logger));
   // Internal only (nginx denies it): before helmet, sessions and limits; cached readiness (ADR 0013).

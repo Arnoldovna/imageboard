@@ -23,7 +23,7 @@ import ImageTile from './ImageTile.vue';
  */
 const emit = defineEmits<{ requestUpload: [] }>();
 
-/** First row at four columns loads at once; everything below loads lazily (F-09). */
+/** The first row of the four-column grid loads at once on every width; everything below loads lazily (F-09, R-11). */
 const EAGER_TILES = 4;
 
 const gallery = useGalleryStore();

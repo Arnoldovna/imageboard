@@ -32,6 +32,10 @@ fixes Vue 3 + Pinia + Vue Router.
   visually hidden `aria-live="polite"` region and registers it with `useAnnouncerStore` on open (a stack); the store
   writes each message to the region of the top-most open dialog and falls back to App.vue's region when no dialog is
   open. Messages are cleared and set on the next tick so repeated identical messages are announced again.
+- **Errors are alerts, not polite announcements** (FEATURES §14 R-12): a failed load, upload, post or delete shows
+  `InlineError` (`role="alert"`) next to the control that failed, or inside the top-most open dialog for a failed
+  delete; a blocked form moves focus to its first invalid field. Only status changes (uploaded, deleted, comment
+  added or deleted, more images loaded) go through the polite live regions above.
 - **Cross-feature effects go through `HomePage.vue`**: `UploadPanel` emits `uploaded(image)` → `gallery.prepend`;
   `ImageDetailDialog` emits `deleted(id)` (through `<RouterView v-slot>`) → `gallery.remove(id)`; `GallerySection`
   emits `request-upload` on its empty-state button → `uploadPanel.open()` (exposed method); after the dialog

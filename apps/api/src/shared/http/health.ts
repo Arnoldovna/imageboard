@@ -79,7 +79,7 @@ function send(res: Response, status: number, body: HealthDto): void {
  */
 export function createHealthRouter({ checks, isShuttingDown, ...options }: HealthRouterOptions): Router {
   const isReady = createReadiness(checks, options);
-  const router = Router();
+  const router = Router({ caseSensitive: true });
 
   router.get('/live', (_req, res) => {
     send(res, 200, { status: 'ok' });

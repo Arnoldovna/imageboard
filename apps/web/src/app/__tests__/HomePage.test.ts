@@ -112,11 +112,10 @@ describe('HomePage wiring', () => {
     await flushPromises();
 
     expect(app.findComponent(ImageDetailDialog).exists()).toBe(false);
-    // Assert the accessible name (aria-labelledby, else text), not the tile's full text: the tile also shows meta.
+    // The tile link holds only the preview (alt="") and the title, so its text is its accessible name.
     const focused = document.activeElement;
-    const labelId = focused?.getAttribute('aria-labelledby');
-    const name = labelId ? document.getElementById(labelId)?.textContent : focused?.textContent;
-    expect(name?.trim()).toBe('Harbour at dawn');
+    expect(focused?.getAttribute('href')).toBe('/images/1');
+    expect(focused?.textContent.trim()).toBe('Harbour at dawn');
   });
 
   it('focuses the "Gallery" heading when the tile is not loaded (deep link) or was deleted', async () => {

@@ -1,6 +1,21 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { parseEnv } from 'node:util';
+
+import { LIMITS } from '@app/shared';
 import { describe, expect, it } from 'vitest';
 
-import { cookiesAreSecure, loadEnv } from './env.js';
+import { cookiesAreSecure, EnvSchema, loadEnv } from './env.js';
+
+/** Every key the env schema reads, so the .env.example check below can never fall behind the schema. */
+const ENV_KEYS = Object.keys(EnvSchema.shape);
+
+const REPO_ROOT = resolve(import.meta.dirname, '../../../..');
+/** The committed template `pnpm setup:env` copies to `.env` (repo root). */
+const EXAMPLE_FILE = join(REPO_ROOT, '.env.example');
+const ENV_EXAMPLE = readFileSync(EXAMPLE_FILE, 'utf8');
 
 const SESSION_SECRET = 'session-secret-value-0123456789-abcdef';
 const CSRF_SECRET = 'csrf-secret-value-0123456789-abcdefghij';
@@ -135,6 +150,62 @@ describe('loadEnv', () => {
     expect(loadEnv({ ...valid, SHUTDOWN_DELAY_MS: '15000' }).SHUTDOWN_DELAY_MS).toBe(15_000);
     expect(() => loadEnv({ ...valid, SHUTDOWN_DELAY_MS: '60001' })).toThrow(/SHUTDOWN_DELAY_MS/);
     expect(() => loadEnv({ ...valid, SHUTDOWN_DELAY_MS: '-1' })).toThrow(/SHUTDOWN_DELAY_MS/);
+  });
+
+  it('B-30: page sizes and upload limits default to the shared LIMITS and are capped by them', () => {
+    const env = loadEnv(valid);
+
+    expect(env.IMAGES_PAGE_SIZE).toBe(LIMITS.imagesPage.default);
+    expect(env.COMMENTS_PAGE_SIZE).toBe(LIMITS.commentsPage.default);
+    expect(env.UPLOAD_MAX_BYTES).toBe(LIMITS.uploadMaxBytesDefault);
+    expect(env.UPLOAD_MAX_FRAMES).toBe(LIMITS.uploadMaxFramesDefault);
+
+    const atCap = {
+      IMAGES_PAGE_SIZE: String(LIMITS.imagesPage.max),
+      COMMENTS_PAGE_SIZE: String(LIMITS.commentsPage.max),
+    };
+    expect(loadEnv({ ...valid, ...atCap })).toMatchObject({
+      IMAGES_PAGE_SIZE: LIMITS.imagesPage.max,
+      COMMENTS_PAGE_SIZE: LIMITS.commentsPage.max,
+    });
+    expect(() => loadEnv({ ...valid, IMAGES_PAGE_SIZE: String(LIMITS.imagesPage.max + 1) })).toThrow(
+      /IMAGES_PAGE_SIZE/,
+    );
+    expect(() => loadEnv({ ...valid, COMMENTS_PAGE_SIZE: String(LIMITS.commentsPage.max + 1) })).toThrow(
+      /COMMENTS_PAGE_SIZE/,
+    );
+  });
+});
+
+describe('.env.example', () => {
+  /** Keys of active `KEY=value` lines and of commented-out optional `# KEY=value` lines. */
+  const documented = new Set(
+    ENV_EXAMPLE.split('\n').flatMap((line) => /^#?\s*([A-Z][A-Z0-9_]*)=/.exec(line)?.[1] ?? []),
+  );
+
+  it('F-64: documents every key the API reads', () => {
+    expect(ENV_KEYS.filter((key) => !documented.has(key))).toEqual([]);
+  });
+
+  it('F-64: the .env that pnpm setup:env writes from it loads as it is, for plain-http local development', () => {
+    // The real script on a fresh directory, so this test follows its rules for which keys are secrets.
+    const dir = mkdtempSync(join(tmpdir(), 'imageboard-env-'));
+    try {
+      const envFile = join(dir, '.env');
+      const script = join(REPO_ROOT, 'scripts/setup-env.mjs');
+      execFileSync(process.execPath, [script, '--env-path', envFile, '--example', EXAMPLE_FILE], { stdio: 'pipe' });
+      const written = parseEnv(readFileSync(envFile, 'utf8'));
+      const example = parseEnv(ENV_EXAMPLE);
+      const generated = Object.keys(written).filter((key) => example[key] === '' && written[key] !== '');
+
+      const env = loadEnv(written);
+
+      expect(generated.sort()).toEqual(['CSRF_SECRET', 'S3_SECRET_ACCESS_KEY', 'SESSION_SECRET']);
+      expect(env.NODE_ENV).toBe('development');
+      expect(cookiesAreSecure(env)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

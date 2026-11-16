@@ -71,6 +71,18 @@ describe('createApp middleware order (OVERVIEW §4.1)', () => {
     expect((await request(app).get('/api/anything')).status).toBe(404);
   });
 
+  it('F-47: paths are case-sensitive, so /api/HEALTH never reaches the internal health router', async () => {
+    const app = appWith();
+
+    // Mount paths (app setting) and the paths inside a router (`caseSensitive: true`) alike.
+    for (const path of ['/api/HEALTH', '/api/Health/live', '/api/health/LIVE', '/api/media/IMAGES/a.jpg']) {
+      const response = await request(app).get(path);
+      expect(response.status, path).toBe(404);
+      expect(problemOf(response).code, path).toBe('not-found');
+    }
+    expect((await request(app).get('/api/health/live')).status).toBe(200);
+  });
+
   it('B-03 / F-39: a mutation without a CSRF token is 403 csrf-invalid, before any route', async () => {
     const response = await postJson(appWith(), '{}');
 

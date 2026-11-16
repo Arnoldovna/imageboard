@@ -16,7 +16,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env['CI']),
   retries: 0, // a flaky test is a failing test: fix the cause (quality-gate), never retry it green
-  ...(process.env['CI'] ? { workers: 2 } : {}),
+  // One stack (one api, one nginx) serves every worker, and it runs on the same machine as the browsers. The default
+  // (half the cores) oversubscribes it locally: WebKit then needs over 10 s to open a page and the two-scheme axe
+  // checks run into the test timeout. Four workers keep the run fast without contention; CI runners have two cores.
+  workers: process.env['CI'] ? 2 : 4,
   reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL,
