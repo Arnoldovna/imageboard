@@ -100,8 +100,8 @@ export function createApp(deps: AppDeps): Express {
   // Internal only (nginx denies it): before helmet, sessions and limits; cached readiness (ADR 0013).
   app.use('/api/health', createHealthRouter({ checks: deps.readiness, isShuttingDown: deps.isShuttingDown }));
 
-  // HSTS exactly when the deployment is HTTPS (the same switch as Secure cookies): the local compose stack runs
-  // NODE_ENV=production over plain http and must not pin HSTS (F-42).
+  // HSTS when the deployment is HTTPS (the same switch as Secure cookies) and the request came over https: the local
+  // compose stack runs NODE_ENV=production over plain http and must not pin HSTS (F-42).
   app.use(securityHeaders({ hsts: secure }));
   // Media: own limiter, no session, no CSRF, no body parsing (ADR 0004).
   app.use('/api/media', upload.mediaRouter);

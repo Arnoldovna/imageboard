@@ -6,7 +6,10 @@ import type { GifOptions, JpegOptions, PngOptions, WebpOptions } from 'sharp';
  * environment through `UploadConfig` (index.ts); everything here is a product decision, changed in an ADR first.
  */
 
-/** The limits the image processor enforces (a subset of `UploadConfig`, so the module passes its config through). */
+/**
+ * The limits the image processor enforces: the operator-tuned ones from `UploadConfig` plus the product limit
+ * `MAX_ANIMATION_PIXELS`, which the module adds (index.ts).
+ */
 export interface ImageLimits {
   /** UPLOAD_MAX_PIXELS: width × height of one frame. */
   maxPixels: number;
@@ -14,7 +17,20 @@ export interface ImageLimits {
   maxFrames: number;
   /** IMAGE_MAX_EDGE: the stored original fits inside a square of this size. */
   maxEdge: number;
+  /** MAX_ANIMATION_PIXELS: pixels of all decoded frames of an animation together. */
+  maxAnimationPixels: number;
 }
+
+/**
+ * Decompression-bomb budget for an animation (ADR 0005): the pixels of all its decoded frames together. The per-frame
+ * limit and the frame cap alone allow 200 frames of 40 MP, and repeated frames compress to almost nothing (a
+ * 6000 × 6000 lossless WebP frame takes 1.4 KB), so such a file fits far below UPLOAD_MAX_BYTES and costs minutes of
+ * CPU. 100 MP keeps ordinary animations (640 × 480 × 150 frames ≈ 46 MP) and bounds the work per upload, which is
+ * mostly re-encoding every frame, at about 15 s of CPU (measured in ADR 0005). A still image is bounded by
+ * UPLOAD_MAX_PIXELS alone. Fixed on purpose, not an environment variable: it is the denial-of-service bound, and a
+ * higher UPLOAD_MAX_PIXELS does not raise it.
+ */
+export const MAX_ANIMATION_PIXELS = 100_000_000;
 
 /** Same-format re-encode of the original (ADR 0005). No `keepMetadata()`/`withMetadata()`: EXIF, XMP, IPTC go. */
 export const ENCODERS = {

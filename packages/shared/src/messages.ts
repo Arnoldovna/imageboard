@@ -62,6 +62,14 @@ export function animationTooLong(maxFrames: number): string {
   return `Animated images can have at most ${count.format(maxFrames)} frames.`;
 }
 
+/**
+ * 400 for an animation whose frames together exceed the animation pixel budget (ADR 0005). Its own message, because
+ * every single frame can be within "The image is too large to process."'s per-frame limit.
+ */
+export function animationTooLarge(maxPixels: number): string {
+  return `Animated images can have at most ${count.format(maxPixels / 1_000_000)} megapixels in all frames together.`;
+}
+
 /** Client-only codes `network` and `unexpected-response` (API.md §0). */
 export const serviceUnavailable = 'The service is not available right now. Try again in a moment.';
 

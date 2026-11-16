@@ -1,4 +1,4 @@
-import { animationTooLong, fileMessages, type ImageMimeType } from '@app/shared';
+import { animationTooLarge, animationTooLong, fileMessages, type ImageMimeType } from '@app/shared';
 import sharp, { type FormatEnum, type Metadata, type Sharp } from 'sharp';
 
 import { InvalidImageError } from '../../shared/errors/app-error.js';
@@ -57,8 +57,10 @@ async function readHeader(bytes: Buffer): Promise<Metadata> {
 }
 
 /**
- * Decompression-bomb guard before any pixel is decoded (ADR 0005): pixels per frame against UPLOAD_MAX_PIXELS and
- * frames against UPLOAD_MAX_FRAMES. The limit is per frame, so an ordinary animated GIF with many small frames passes.
+ * Decompression-bomb guard before any pixel is decoded (ADR 0005): pixels per frame against UPLOAD_MAX_PIXELS, frames
+ * against UPLOAD_MAX_FRAMES and, for an animation, the pixels of all decoded frames together against
+ * `maxAnimationPixels`. The per-frame limit lets an ordinary animated GIF with many small frames pass; the total stops
+ * one made of many huge frames, which repeat and so compress to a few bytes each.
  */
 async function inspect(bytes: Buffer, mimeType: ImageMimeType, limits: ImageLimits): Promise<Inspection> {
   const metadata = await readHeader(bytes);
@@ -68,9 +70,14 @@ async function inspect(bytes: Buffer, mimeType: ImageMimeType, limits: ImageLimi
   const frameWidth = metadata.width;
   const frameHeight = metadata.pageHeight ?? metadata.height;
   const frames = metadata.pages ?? 1;
-  if (frameWidth * frameHeight > limits.maxPixels) throw new InvalidImageError(fileMessages.tooManyPixels);
+  const framePixels = frameWidth * frameHeight;
+  if (framePixels > limits.maxPixels) throw new InvalidImageError(fileMessages.tooManyPixels);
   if (frames > limits.maxFrames) throw new InvalidImageError(animationTooLong(limits.maxFrames));
-  return { frameWidth, frameHeight, decodedFrames: ANIMATED_TYPES.has(mimeType) ? frames : 1 };
+  const decodedFrames = ANIMATED_TYPES.has(mimeType) ? frames : 1;
+  if (decodedFrames > 1 && framePixels * decodedFrames > limits.maxAnimationPixels) {
+    throw new InvalidImageError(animationTooLarge(limits.maxAnimationPixels));
+  }
+  return { frameWidth, frameHeight, decodedFrames };
 }
 
 function encode(pipeline: Sharp, mimeType: ImageMimeType): Sharp {

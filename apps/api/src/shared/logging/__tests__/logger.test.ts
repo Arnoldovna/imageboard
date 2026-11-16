@@ -40,7 +40,7 @@ function loggedApp(options: { trustProxy?: number } = {}) {
 }
 
 describe('request logging (F-46)', () => {
-  it('B-29: redacts cookies, CSRF tokens, authorization, x-forwarded-for and set-cookie', async () => {
+  it('B-29: never logs cookies, CSRF tokens, authorization or x-forwarded-for, and redacts set-cookie', async () => {
     const { app, lines } = loggedApp();
 
     await request(app)
@@ -57,7 +57,50 @@ describe('request logging (F-46)', () => {
     expect(output).not.toContain('203.0.113.9');
     expect(output).not.toContain('session-secret-value');
     const line = lines.find((entry) => entry.req?.url === '/api/thing');
-    expect(line?.req?.headers).toMatchObject({ cookie: '[redacted]', 'x-csrf-token': '[redacted]' });
+    for (const header of ['cookie', 'x-csrf-token', 'authorization', 'x-forwarded-for']) {
+      expect(line?.req?.headers, header).not.toHaveProperty(header);
+    }
+    expect(line?.res?.headers?.['set-cookie']).toBe('[redacted]');
+  });
+
+  it.each([
+    ['Forwarded', 'for=198.51.100.77;proto=https'],
+    ['X-Real-IP', '198.51.100.77'],
+    ['True-Client-IP', '198.51.100.77'],
+    ['CF-Connecting-IP', '198.51.100.77'],
+    ['Fastly-Client-IP', '198.51.100.77'],
+    ['X-Client-IP', '198.51.100.77'],
+    // Headers no list of known names would contain: the allow-list keeps them out all the same.
+    ['X-Original-Forwarded-For', '198.51.100.77'],
+    ['X-Envoy-External-Address', '198.51.100.77'],
+    ['X-Azure-ClientIP', '198.51.100.77'],
+  ])('ADR 0019: never logs the full client address that a proxy or CDN sends in %s', async (header, value) => {
+    const { app, lines } = loggedApp();
+
+    await request(app).get('/api/thing').set(header, value);
+
+    expect(JSON.stringify(lines)).not.toContain('198.51.100.77');
+    const line = lines.find((entry) => entry.req?.url === '/api/thing');
+    expect(line?.req?.headers).not.toHaveProperty(header.toLowerCase());
+  });
+
+  it('F-46: logs only the allow-listed request headers', async () => {
+    const { app, lines } = loggedApp();
+
+    await request(app)
+      .get('/api/thing')
+      .set('User-Agent', 'logger-test/1.0')
+      .set('Accept', 'application/json')
+      .set('Sec-Fetch-Site', 'same-origin')
+      .set('X-Something-New', 'not logged');
+
+    const line = lines.find((entry) => entry.req?.url === '/api/thing');
+    expect(line?.req?.headers).toEqual({
+      host: expect.any(String) as unknown,
+      'user-agent': 'logger-test/1.0',
+      accept: 'application/json',
+      'sec-fetch-site': 'same-origin',
+    });
   });
 
   it('redacts password and secret fields anywhere one level deep', async () => {

@@ -32,7 +32,12 @@ async function settleAnimations(page: Page): Promise<void> {
  */
 export async function expectNoA11yViolations(page: Page, options: A11yOptions = {}): Promise<void> {
   await settleAnimations(page);
-  let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+  // Legacy mode runs axe.run() in the page itself. The default opens an extra blank page per check only to merge the
+  // results of cross-origin frames, and in WebKit each of those pages costs seconds, which pushed the two-scheme
+  // checks towards the test timeout. The app renders no frames, and this assertion keeps that premise checked, so
+  // nothing is analysed less.
+  await expect(page.locator('iframe, frame'), 'axe legacy mode only covers pages without frames').toHaveCount(0);
+  let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS).setLegacyMode();
   if (options.include !== undefined) builder = builder.include(options.include);
   const results = await builder.analyze();
 

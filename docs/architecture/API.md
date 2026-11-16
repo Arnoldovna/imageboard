@@ -90,13 +90,13 @@ export const ProblemDetails = z.looseObject({
 
 Field messages (`packages/shared/src/messages.ts`, used by API and UI):
 
-| Field         | Empty                        | Too long                                                     | Other                                                                                                                                                                      |
-| ------------- | ---------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `authorName`  | "Enter a name."              | "Name must be 60 characters or fewer."                       | "Name must be on one line."                                                                                                                                                |
-| `title`       | "Enter a title."             | "Title must be 120 characters or fewer."                     | "Title must be on one line."                                                                                                                                               |
-| `description` | —                            | "Description must be 2,000 characters or fewer."             | "Description contains characters that are not allowed."                                                                                                                    |
-| `body`        | "Write a comment."           | "Comment must be 1,000 characters or fewer."                 | as description                                                                                                                                                             |
-| `file`        | "Choose an image to upload." | "The image must be 5 MB or smaller." (from `uploadMaxBytes`) | "Only JPEG, PNG, WebP or GIF images are allowed." · "The image could not be read." · "The image is too large to process." · "Animated images can have at most 200 frames." |
+| Field         | Empty                        | Too long                                                     | Other                                                                                                                                                                                                                                                  |
+| ------------- | ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `authorName`  | "Enter a name."              | "Name must be 60 characters or fewer."                       | "Name must be on one line."                                                                                                                                                                                                                            |
+| `title`       | "Enter a title."             | "Title must be 120 characters or fewer."                     | "Title must be on one line."                                                                                                                                                                                                                           |
+| `description` | —                            | "Description must be 2,000 characters or fewer."             | "Description contains characters that are not allowed."                                                                                                                                                                                                |
+| `body`        | "Write a comment."           | "Comment must be 1,000 characters or fewer."                 | as description                                                                                                                                                                                                                                         |
+| `file`        | "Choose an image to upload." | "The image must be 5 MB or smaller." (from `uploadMaxBytes`) | "Only JPEG, PNG, WebP or GIF images are allowed." · "The image could not be read." · "The image is too large to process." · "Animated images can have at most 200 frames." · "Animated images can have at most 100 megapixels in all frames together." |
 
 Client-only error codes (never sent by the API): `network` (fetch rejected) and `unexpected-response` (non-2xx
 without a problem body, e.g. nginx 413/502/504): "The service is not available right now. Try again in a moment."
@@ -192,7 +192,8 @@ Processing order (each step aborts before anything is stored, ADR 0005/0008):
    ("Only JPEG, PNG, WebP or GIF images are allowed."). Client filename and client MIME type are ignored.
 5. Header inspection: pixels per frame > `UPLOAD_MAX_PIXELS` → `400 invalid-image` ("The image is too large to
    process."); frames > `UPLOAD_MAX_FRAMES` (200) → `400 invalid-image` ("Animated images can have at most 200
-   frames.").
+   frames."); an animated GIF/WebP with more than 100 MP in all frames together (`MAX_ANIMATION_PIXELS`, ADR 0005)
+   → `400 invalid-image` ("Animated images can have at most 100 megapixels in all frames together.").
 6. sharp decode/re-encode + preview → `400 invalid-image` ("The image could not be read.") on decode failure.
 7. `PutObject images/<uuid>.<ext>`, then `previews/<uuid>.webp` → on failure discard what was stored,
    `500 internal-error`, no row.

@@ -105,11 +105,17 @@ describe('createApp middleware order (OVERVIEW §4.1)', () => {
   });
 
   it('F-42: no HSTS when cookies are not Secure, even with NODE_ENV=production (the local compose stack)', async () => {
-    const plainHttp = await request(appWith({ NODE_ENV: 'production', COOKIE_SECURE: 'false' })).get('/api/x');
-    const https = await request(appWith({ NODE_ENV: 'production' })).get('/api/x');
+    const behindProxy = { NODE_ENV: 'production', TRUST_PROXY: '1' } as const;
+    const local = await request(appWith({ ...behindProxy, COOKIE_SECURE: 'false' }))
+      .get('/api/x')
+      .set('X-Forwarded-Proto', 'https');
+    const https = await request(appWith(behindProxy)).get('/api/x').set('X-Forwarded-Proto', 'https');
+    const plainHttp = await request(appWith(behindProxy)).get('/api/x');
 
-    expect(plainHttp.headers['strict-transport-security']).toBeUndefined();
+    expect(local.headers['strict-transport-security']).toBeUndefined();
     expect(https.headers['strict-transport-security']).toBe('max-age=31536000; includeSubDomains');
+    // RFC 6797 §7.2: never over plain http, whatever the deployment says.
+    expect(plainHttp.headers['strict-transport-security']).toBeUndefined();
   });
 
   it('B-10: never sends X-Powered-By and echoes a request id', async () => {

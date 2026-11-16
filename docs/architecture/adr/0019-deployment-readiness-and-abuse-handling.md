@@ -26,6 +26,15 @@ Built now (cheap, and tested like everything else):
   `map … { default $http_x_forwarded_proto; '' $scheme; }`) let any client that reaches nginx directly claim https
   over plain http. `TRUST_PROXY` = the real number of hops (documented in `.env.example`). `security-headers.int.test.ts` asserts the `Secure` cookie when `X-Forwarded-Proto: https`
   arrives through the configured hops.
+- **HSTS follows the same scheme** (F-42; added in the final security audit): nginx sends
+  `Strict-Transport-Security: max-age=31536000; includeSubDomains` (the API's `HSTS_POLICY`, kept equal by
+  `security.test.ts`) when `$fwd_proto` is `https` and the response has no HSTS of its own, so the SPA's documents
+  carry it from the first response, not only the API's fetches. The API sends it only when cookies are Secure **and**
+  `req.secure` (X-Forwarded-Proto through the `TRUST_PROXY` hops), so plain http never gets it from either side (RFC
+  6797 §7.2). The e2e project trusts only `127.0.0.1/32` (`docker-compose.e2e.yml`): every browser and spec is an
+  ordinary client, as with the production default, and `e2e/smoke.spec.ts` asserts that a claimed https is ignored
+  (no HSTS, the API still compares Origin with `http://`), while a probe inside the web container
+  (`e2e/support/stack.ts`) plays the load balancer and asserts one HSTS copy on pages and API responses.
 - **nginx config is a template** (`apps/web/templates/default.conf.template`, rendered by the image's envsubst
   entrypoint): `API_MAX_BODY_SIZE` (default `6m`), `CSP_IMG_SRC_EXTRA` (default empty; a CDN origin later) and
   `TRUSTED_PROXY_CIDR` (default `0.0.0.0/32`, the unspecified address, which is never a peer) are the only variables. Defaults are
@@ -43,8 +52,11 @@ Built now (cheap, and tested like everything else):
 - **Global daily upload cap** (`RATE_LIMIT_UPLOADS_GLOBAL_DAY` = 200, ADR 0013) bounds storage cost even against
   many IPs.
 - **IP minimisation in logs**: the pino-http request serializer logs `remoteAddress` truncated to /24 (IPv4) or /48
-  (IPv6) and never logs `x-forwarded-for`. Rate limiting still uses the full address in Redis keys with TTLs ≤ 24 h.
-  `logger.test.ts` asserts the truncation.
+  (IPv6) and only an allow-list of request headers (`host`, `user-agent`, `accept`, `content-type`,
+  `content-length`, `origin`, `referer`, `sec-fetch-site`). No client-address header a proxy or CDN may add
+  (`X-Forwarded-For`, `Forwarded`, `X-Real-IP`, `CF-Connecting-IP`, vendor headers not known today) can reach the
+  logs. Rate limiting still uses the full address in Redis keys with TTLs ≤ 24 h. `logger.test.ts` asserts the
+  truncation and the allow-list.
 
 Checklist that must be done **before** `DEPLOY_ENABLED` is set (kept in OVERVIEW §16 and in the deploy job's
 description; none of it blocks the Definition of Done for the private repository):
@@ -54,7 +66,7 @@ description; none of it blocks the Definition of Done for the private repository
    private. `MEDIA_PUBLIC_BASE_URL` and `CSP_IMG_SRC_EXTRA` are set together. Delete must invalidate both media paths.
 2. Production Redis per ADR 0002 (AOF, `noeviction` for sessions, optional separate limiter instance), memory alert.
 3. `TRUST_PROXY` set to the measured hop count and `TRUSTED_PROXY_CIDR` (web container) to the load balancer's
-   address range; verify `Secure` + `__Host-imageboard.sid` in a browser.
+   address range; verify `Secure` + `__Host-imageboard.sid` and HSTS on the page in a browser.
 4. Load balancer health probe targets the api container's `/api/health`, not the public origin; `SHUTDOWN_DELAY_MS`
    ≥ its probe interval × unhealthy threshold, and the platform's stop timeout above that plus 10 s (ADR 0013).
 5. Imprint (Impressum) and privacy page (log contents, retention, session cookie, no tracking) linked from the

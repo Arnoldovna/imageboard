@@ -12,12 +12,20 @@ export interface SecurityHeaderOptions {
 }
 
 /**
+ * The one HSTS policy of the origin (F-42): one year, subdomains included. nginx sends the same value on the pages
+ * (apps/web/templates/default.conf.template); security.test.ts keeps the two equal.
+ */
+export const HSTS_POLICY = 'max-age=31536000; includeSubDomains';
+
+/**
  * helmet for the JSON API (F-42, B-10). API responses are data, never documents, so the CSP forbids everything.
  * The SPA's CSP comes from nginx (apps/web/templates/default.conf.template); the media route sets its own sandbox
- * CSP (ADR 0004). CORP stays `same-origin`; there is no CORS middleware (ADR 0003).
+ * CSP (ADR 0004). CORP stays `same-origin`; there is no CORS middleware (ADR 0003). `X-Frame-Options: DENY` says
+ * what `frame-ancestors 'none'` says for browsers without CSP 2 and matches the pages' header; helmet's default,
+ * SAMEORIGIN, would allow same-origin framing.
  */
 export function securityHeaders({ hsts }: SecurityHeaderOptions): RequestHandler {
-  return helmet({
+  const headers = helmet({
     contentSecurityPolicy: {
       useDefaults: false,
       directives: {
@@ -28,8 +36,16 @@ export function securityHeaders({ hsts }: SecurityHeaderOptions): RequestHandler
       },
     },
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-    strictTransportSecurity: hsts ? { maxAge: 31_536_000, includeSubDomains: true } : false,
+    xFrameOptions: { action: 'deny' },
+    strictTransportSecurity: false,
   });
+  if (!hsts) return headers;
+  // RFC 6797 §7.2: never over plain http. `req.secure` reads X-Forwarded-Proto through the TRUST_PROXY hops, the
+  // scheme nginx decided ($fwd_proto, ADR 0019), so pages and API responses follow the same rule.
+  return (req, res, next) => {
+    if (req.secure) res.setHeader('Strict-Transport-Security', HSTS_POLICY);
+    headers(req, res, next);
+  };
 }
 
 /** A store factory: each limiter needs its own store with a distinct prefix. */

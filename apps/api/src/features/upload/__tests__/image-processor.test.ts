@@ -1,16 +1,21 @@
 import { crc32, deflateSync } from 'node:zlib';
 
-import { animationTooLong, fileMessages } from '@app/shared';
+import { animationTooLarge, animationTooLong, fileMessages } from '@app/shared';
 import { fileTypeFromBuffer } from 'file-type';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
-import { apng, gif, jpegWithGps, png, webp } from '../../../../test/fixtures.js';
+import { animatedWebp, apng, gif, jpegWithGps, png, webp } from '../../../../test/fixtures.js';
 import { InvalidImageError } from '../../../shared/errors/app-error.js';
 import { createImageProcessor } from '../image-processor.js';
-import type { ImageLimits } from '../upload.config.js';
+import { type ImageLimits, MAX_ANIMATION_PIXELS } from '../upload.config.js';
 
-const DEFAULT_LIMITS: ImageLimits = { maxPixels: 40_000_000, maxFrames: 200, maxEdge: 2560 };
+const DEFAULT_LIMITS: ImageLimits = {
+  maxPixels: 40_000_000,
+  maxFrames: 200,
+  maxEdge: 2560,
+  maxAnimationPixels: MAX_ANIMATION_PIXELS,
+};
 
 function processor(limits: Partial<ImageLimits> = {}) {
   return createImageProcessor({ ...DEFAULT_LIMITS, ...limits });
@@ -150,6 +155,38 @@ describe('image processor: rejections (400 invalid-image)', () => {
 
   it('rejects more frames than UPLOAD_MAX_FRAMES', async () => {
     await expectInvalidImage(processor({ maxFrames: 200 }).process(gif(201), 'image/gif'), animationTooLong(200));
+  });
+
+  it('ADR 0005: rejects an animation bomb by its header (200 frames of 6000 × 6000 in a few KB)', async () => {
+    // Every frame passes UPLOAD_MAX_PIXELS and 200 frames pass UPLOAD_MAX_FRAMES, but decoding it would mean
+    // 7.2 gigapixels (minutes of CPU) from a file far below UPLOAD_MAX_BYTES.
+    const bomb = animatedWebp(200, { width: 6000, height: 6000 });
+    expect(bomb.length).toBeLessThan(16 * 1024);
+    expect(await sharp(bomb).metadata()).toMatchObject({ format: 'webp', width: 6000, height: 6000, pages: 200 });
+
+    await expectInvalidImage(processor().process(bomb, 'image/webp'), animationTooLarge(MAX_ANIMATION_PIXELS));
+  });
+
+  it('ADR 0005: counts the animation budget over all decoded frames (150 frames of 8 × 8 = 9600 pixels)', async () => {
+    const result = await processor({ maxAnimationPixels: 9600 }).process(gif(150), 'image/gif');
+
+    expect({ width: result.width, height: result.height }).toEqual({ width: 8, height: 8 });
+    await expectInvalidImage(
+      processor({ maxAnimationPixels: 9599 }).process(gif(150), 'image/gif'),
+      animationTooLarge(9599),
+    );
+  });
+
+  it('ADR 0005: the animation budget leaves still images to UPLOAD_MAX_PIXELS (APNG decodes one frame)', async () => {
+    await expect(processor({ maxAnimationPixels: 1 }).process(png(), 'image/png')).resolves.toBeDefined();
+    await expect(processor({ maxAnimationPixels: 1 }).process(apng(), 'image/png')).resolves.toBeDefined();
+  });
+
+  it('keeps an animated WebP inside the budget animated', async () => {
+    const result = await processor().process(animatedWebp(3), 'image/webp');
+
+    expect({ width: result.width, height: result.height }).toEqual({ width: 24, height: 16 });
+    expect(await sharp(result.original).metadata()).toMatchObject({ format: 'webp', pages: 3 });
   });
 
   it('rejects bytes that libvips cannot read', async () => {

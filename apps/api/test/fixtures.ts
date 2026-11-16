@@ -7,6 +7,7 @@ import { crc32, deflateSync } from 'node:zlib';
  *
  * - jpegWithGps(): baseline greyscale JPEG with an EXIF APP1 segment: Orientation 6 and a GPS IFD (B-06).
  * - png(), apng(), webp(), gif(frames): valid images of the allowed types; APNG and animated GIF for the frame rules.
+ * - animatedWebp(frames, size): animated WebP of solid frames, tiny at any size (the animation pixel budget).
  * - svg, htmlAsPng, pdf, oversize(): content that must be rejected (415 / 413, B-04, B-05).
  */
 
@@ -294,8 +295,29 @@ function singleSymbolCode(writer: BitWriter, symbol: number): void {
   else writer.write(1, 1).write(symbol, 8);
 }
 
-/** Solid-colour lossless WebP: no transforms, no colour cache, five one-symbol prefix codes, no pixel bits. */
-export function webp(size: Size = { width: 24, height: 16 }, [red, green, blue]: Rgb = [184, 211, 243]): Buffer {
+function u24le(value: number): Buffer {
+  const buffer = Buffer.alloc(3);
+  buffer.writeUIntLE(value, 0, 3);
+  return buffer;
+}
+
+/** A RIFF chunk: FourCC, little-endian size, payload, padded to an even length. */
+function riffChunk(fourcc: string, payload: Buffer): Buffer {
+  return Buffer.concat([
+    Buffer.from(fourcc, 'latin1'),
+    u32le(payload.length),
+    payload,
+    payload.length % 2 === 1 ? Buffer.alloc(1) : Buffer.alloc(0),
+  ]);
+}
+
+function riffWebp(chunks: readonly Buffer[]): Buffer {
+  const body = Buffer.concat([Buffer.from('WEBP', 'latin1'), ...chunks]);
+  return Buffer.concat([Buffer.from('RIFF', 'latin1'), u32le(body.length), body]);
+}
+
+/** One solid-colour VP8L chunk: no transforms, no colour cache, five one-symbol prefix codes, no pixel bits. */
+function solidVp8lChunk(size: Size, [red, green, blue]: Rgb): Buffer {
   const writer = new BitWriter()
     .write(0x2f, 8) // VP8L signature
     .write(size.width - 1, 14)
@@ -306,14 +328,41 @@ export function webp(size: Size = { width: 24, height: 16 }, [red, green, blue]:
     .write(0, 1) // no colour cache
     .write(0, 1); // no meta prefix codes
   for (const symbol of [green, red, blue, 255, 0]) singleSymbolCode(writer, symbol);
-  const data = writer.toBuffer();
-  const chunk = Buffer.concat([
-    Buffer.from('VP8L', 'latin1'),
-    u32le(data.length),
-    data,
-    data.length % 2 === 1 ? Buffer.alloc(1) : Buffer.alloc(0),
+  return riffChunk('VP8L', writer.toBuffer());
+}
+
+/** Solid-colour lossless WebP (a single VP8L chunk). */
+export function webp(size: Size = { width: 24, height: 16 }, colour: Rgb = [184, 211, 243]): Buffer {
+  return riffWebp([solidVp8lChunk(size, colour)]);
+}
+
+/**
+ * Animated WebP (VP8X + ANIM + one ANMF per frame) of solid-colour VP8L frames that cycle through the GIF palette
+ * (identical neighbours would be merged by the encoder). A frame costs a few dozen bytes whatever its size, so 200
+ * frames of 6000 × 6000 (7.2 gigapixels once decoded) fit in a few KB: the shape of an animation decompression bomb
+ * (ADR 0005).
+ */
+export function animatedWebp(frames: number, size: Size = { width: 24, height: 16 }): Buffer {
+  const width = u24le(size.width - 1);
+  const height = u24le(size.height - 1);
+  const frame = (index: number) =>
+    riffChunk(
+      'ANMF',
+      Buffer.concat([
+        u24le(0), // x offset / 2
+        u24le(0), // y offset / 2
+        width,
+        height,
+        u24le(100), // duration in ms
+        Buffer.from([0x02]), // do not blend, do not dispose
+        solidVp8lChunk(size, GIF_PALETTE[1 + (index % 3)] ?? [0, 0, 0]),
+      ]),
+    );
+  return riffWebp([
+    riffChunk('VP8X', Buffer.concat([Buffer.from([0x02, 0, 0, 0]), width, height])), // flags: animation
+    riffChunk('ANIM', Buffer.concat([u32le(0), u16le(0)])), // background colour, loop forever
+    ...Array.from({ length: frames }, (_, index) => frame(index)),
   ]);
-  return Buffer.concat([Buffer.from('RIFF', 'latin1'), u32le(4 + chunk.length), Buffer.from('WEBP', 'latin1'), chunk]);
 }
 
 // ---------------------------------------------------------------- content that must be rejected

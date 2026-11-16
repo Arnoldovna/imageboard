@@ -424,6 +424,28 @@ and screenshots follow in Etappe 3 (Presentation, `portfolio-readme`; setup sect
 
 ---
 
+## Etappe 3: Presentation
+
+Branch `docs/presentation`. Units in parallel, then one integration step and the quality gate.
+
+| Unit      | Files                                                                                                | Covers                     |
+| --------- | ---------------------------------------------------------------------------------------------------- | -------------------------- |
+| readme    | `README.md`, `docs/media/{desktop,mobile}-{light,dark}.png`, `desktop-detail-light.png`, upload GIF  | B-85, F-64 (setup in docs) |
+| canvas    | `docs/media/social-preview.png` (1280×640), `cover.png`, `design-philosophy.md` (canvas-design, OFL) | PLAN Etappe 3              |
+| security  | `/security-review`, gitleaks, `pnpm audit --prod --audit-level=high`; fixes in the owning files      | B-01 to B-13 re-check      |
+| integrate | `e2e/readme-media.spec.ts`, `playwright.media.config.ts`, `pnpm media:readme`, traceability evidence | README media reproducible  |
+
+README media is regenerated, never hand-cropped: `pnpm demo`, then `E2E_BASE_URL=<printed URL> pnpm media:readme`
+(the clip uploads one image and deletes it again; the GIF command is in the spec's header). The social preview is
+uploaded by Marina in the repository settings (no API).
+
+Done when: README follows `portfolio-readme` (hero screenshot, GIF < 3 MB, PNGs < 1 MB, Mermaid diagram, 2018 vs
+2026 table, getting started with `pnpm demo` and `pnpm dev:setup`, credits, MIT), no secrets or legal name in it,
+`pnpm verify` green. Open for Marina: the LinkedIn URL in `PROFILE_LINKS`, the social preview upload, and the
+public switch with CodeQL and branch rulesets.
+
+---
+
 ## Summary
 
 ```mermaid

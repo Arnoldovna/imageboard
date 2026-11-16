@@ -1,13 +1,14 @@
-import { animationTooLong, fileMessages } from '@app/shared';
+import { animationTooLarge, animationTooLong, fileMessages } from '@app/shared';
 import sharp from 'sharp';
 import { describe, expect, it, vi } from 'vitest';
 
 import { captureLogger, createFakeStorage, type FakeStorage } from '../../../../test/fakes.js';
-import { apng, gif, htmlAsPng, jpegWithGps, pdf, png, svg } from '../../../../test/fixtures.js';
+import { animatedWebp, apng, gif, htmlAsPng, jpegWithGps, pdf, png, svg } from '../../../../test/fixtures.js';
 import { InvalidImageError, UnsupportedImageTypeError } from '../../../shared/errors/app-error.js';
 import type { ObjectStorage } from '../../../shared/storage/object-storage.js';
 import { createImageProcessor } from '../image-processor.js';
 import { MEDIA_KEY_PATTERN, PREVIEW_KEY_PATTERN } from '../object-key.js';
+import { MAX_ANIMATION_PIXELS } from '../upload.config.js';
 import { createUploadService, type UploadServiceDeps } from '../upload.service.js';
 
 const UUID = '0b9d3c2a-5e6f-4a1b-8c2d-3e4f5a6b7c8d';
@@ -50,7 +51,12 @@ function setup(overrides: Partial<UploadServiceDeps> & { maxFrames?: number } = 
   const service = createUploadService({
     storage,
     logger: log.logger,
-    processor: createImageProcessor({ maxPixels: 40_000_000, maxFrames, maxEdge: 2560 }),
+    processor: createImageProcessor({
+      maxPixels: 40_000_000,
+      maxFrames,
+      maxEdge: 2560,
+      maxAnimationPixels: MAX_ANIMATION_PIXELS,
+    }),
     mediaPublicBaseUrl: '/api/media',
     sleep,
     ...deps,
@@ -135,6 +141,17 @@ describe('ingest', () => {
     await expect(service.ingest({ buffer, size: buffer.length })).rejects.toMatchObject({
       code: 'invalid-image',
       message: animationTooLong(10),
+    });
+    expect(storage.calls().put).toBe(0);
+  });
+
+  it('ADR 0005: refuses an animation bomb with the production limits before storing anything', async () => {
+    const { service, storage } = setup();
+    const buffer = animatedWebp(200, { width: 6000, height: 6000 });
+
+    await expect(service.ingest({ buffer, size: buffer.length })).rejects.toMatchObject({
+      code: 'invalid-image',
+      message: animationTooLarge(MAX_ANIMATION_PIXELS),
     });
     expect(storage.calls().put).toBe(0);
   });

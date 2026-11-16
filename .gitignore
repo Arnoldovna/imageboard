@@ -9,6 +9,7 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
+docs/media/raw/
 
 # environment and secrets: never commit these
 .env

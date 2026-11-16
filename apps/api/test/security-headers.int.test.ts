@@ -28,7 +28,7 @@ describe('security headers on API responses', () => {
     expect(response.headers['x-content-type-options']).toBe('nosniff');
     expect(response.headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
     expect(response.headers['cross-origin-resource-policy']).toBe('same-origin');
-    expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
+    expect(response.headers['x-frame-options']).toBe('DENY');
     expect(response.headers['x-powered-by']).toBeUndefined();
     expect(response.headers['access-control-allow-origin']).toBeUndefined();
     expect(response.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
@@ -69,9 +69,10 @@ describe('production cookies behind a TLS-terminating proxy (ADR 0019)', () => {
     expect(response.headers['strict-transport-security']).toBe('max-age=31536000; includeSubDomains');
   });
 
-  it('never sends the secure session cookie over plain http', async () => {
+  it('never sends the secure session cookie or HSTS over plain http', async () => {
     const response = await request(testApp.app).get('/api/session');
 
     expect(setCookie(response, '__Host-imageboard.sid')).toBeUndefined();
+    expect(response.headers['strict-transport-security']).toBeUndefined();
   });
 });

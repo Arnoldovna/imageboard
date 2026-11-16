@@ -11,10 +11,10 @@ map $uri $cache_control {
 }
 
 # nginx adds each security header only when the response does not carry its own. The API (helmet) sets all four on
-# every response it sends, so /api/ never gets a second, conflicting copy (B-10). Everything else gets nginx's: the
-# SPA and its assets, and every response nginx generates itself, also under /api/ (413 for an oversized body, 502/504
-# while the API is down, the /api/health 404). Map values are evaluated when add_header runs, after the upstream
-# response headers have arrived.
+# every response it sends (HSTS too, over https), so /api/ never gets a second, conflicting copy (B-10). Everything
+# else gets nginx's: the SPA and its assets, and every response nginx generates itself, also under /api/ (413 for an
+# oversized body, 502/504 while the API is down, the /api/health 404). Map values are evaluated when add_header runs,
+# after the upstream response headers have arrived.
 map $upstream_http_content_security_policy $csp_header {
   ""       "default-src 'self'; img-src 'self' data: blob: ${CSP_IMG_SRC_EXTRA}; style-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'";
   default  "";
@@ -33,6 +33,15 @@ map $upstream_http_x_content_type_options $nosniff_header {
 map $upstream_http_referrer_policy $referrer_policy_header {
   ""       "strict-origin-when-cross-origin";
   default  "";
+}
+
+# HSTS (F-42) only when the user's connection was https, i.e. the trusted load balancer said so ($fwd_proto below),
+# with the API's HSTS_POLICY (security.test.ts keeps the two equal), and only when the response has none of its own
+# (the API sends it when cookies are Secure and X-Forwarded-Proto is https). Plain http never gets it from nginx or
+# the API, so the local stack cannot pin 127.0.0.1.
+map "$fwd_proto:$upstream_http_strict_transport_security" $hsts_header {
+  "https:"  "max-age=31536000; includeSubDomains";
+  default   "";
 }
 
 # Keep the scheme a TLS-terminating load balancer reports (ADR 0019), but only when the request really comes from
@@ -61,6 +70,7 @@ server {
   add_header Referrer-Policy $referrer_policy_header always;
   add_header X-Frame-Options $frame_options_header always;
   add_header Content-Security-Policy $csp_header always;
+  add_header Strict-Transport-Security $hsts_header always;
 
   # Compression settings for the static locations below, which switch gzip on; /api/ leaves it off.
   gzip_vary on;

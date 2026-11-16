@@ -173,11 +173,16 @@
     },
     {
       "id": "B-85",
-      "proof": "MIT LICENSE committed; the portfolio README (setup, screenshots in docs/media, architecture) is written in the Presentation phase (Etappe 3, portfolio-readme)",
+      "proof": "MIT LICENSE committed; the portfolio README (Etappe 3, portfolio-readme) has the setup in three commands, screenshots and the upload clip committed in docs/media (no third-party host), the architecture diagram and the licence",
       "evidence": [
         { "file": "LICENSE", "contains": "MIT License" },
-        { "file": "README.md" },
-        { "file": "docs/architecture/BUILD-ORDER.md", "contains": "portfolio-readme" }
+        { "file": "README.md", "contains": "pnpm dev:setup" },
+        { "file": "README.md", "contains": "](docs/media/desktop-light.png)" },
+        { "file": "README.md", "contains": "](docs/media/upload-flow.gif)" },
+        { "file": "README.md", "contains": "```mermaid" },
+        { "file": "README.md", "contains": "MIT, see [LICENSE](LICENSE)." },
+        { "file": "docs/media/desktop-light.png" },
+        { "file": "docs/media/upload-flow.gif" }
       ]
     },
     {

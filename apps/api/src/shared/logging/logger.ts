@@ -7,7 +7,27 @@ import { pinoHttp } from 'pino-http';
 
 import type { Env } from '../../config/env.js';
 
-/** Never logged in clear (F-46): session and CSRF material, credentials, the proxy chain with client addresses. */
+/**
+ * The only request headers that are logged (F-46, ADR 0019): enough to debug a request, nothing that identifies a
+ * person or a session. An allow-list, not a deny-list: cookies, credentials, the CSRF token and every client-address
+ * header that a load balancer or CDN may add (`X-Forwarded-For`, `Forwarded`, `X-Real-IP`, `CF-Connecting-IP`, …)
+ * never reach the log, including vendor headers nobody has thought of yet. `x-request-id` is logged as `req.id`.
+ */
+const LOGGED_REQUEST_HEADERS = [
+  'host',
+  'user-agent',
+  'accept',
+  'content-type',
+  'content-length',
+  'origin',
+  'referer',
+  'sec-fetch-site',
+] as const;
+
+/**
+ * Never logged in clear (F-46): the session cookie the API sets, and credentials and the proxy chain in anything
+ * logged by hand. A second line behind the allow-list above, which already keeps them out of request logs.
+ */
 export const REDACTED_PATHS = [
   'req.headers.cookie',
   'req.headers.authorization',
@@ -17,6 +37,12 @@ export const REDACTED_PATHS = [
   '*.password',
   '*.secret',
 ] as const;
+
+function loggedHeaders(headers: unknown): Record<string, unknown> {
+  if (typeof headers !== 'object' || headers === null) return {};
+  const all = headers as Record<string, unknown>;
+  return Object.fromEntries(LOGGED_REQUEST_HEADERS.filter((name) => name in all).map((name) => [name, all[name]]));
+}
 
 /** `destination` is for tests that capture output; production writes JSON to stdout (pretty in development). */
 export function createLogger(env: Pick<Env, 'LOG_LEVEL' | 'NODE_ENV'>, destination?: DestinationStream): Logger {
@@ -102,12 +128,12 @@ export function createRequestLogger(logger: Logger) {
       return 'info';
     },
     serializers: {
-      // The client address behind TRUST_PROXY hops (req.ip), truncated; never the port or x-forwarded-for.
+      // The client address behind TRUST_PROXY hops (req.ip), truncated; never the port. Headers: allow-list only.
       req: (req: SerializedRequestLike) => ({
         id: req.id,
         method: req.method,
         url: req.url,
-        headers: req.headers,
+        headers: loggedHeaders(req.headers),
         remoteAddress: truncateIp(req.raw?.ip ?? req.remoteAddress),
       }),
     },

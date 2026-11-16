@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { expectNoA11yViolations } from './a11y.ts';
 import { getSessionViaApi } from './support/api.ts';
+import { getAsLoadBalancer, type ResponseHeader } from './support/stack.ts';
 
 /** Collects CSP violations, which Chromium and WebKit report on the console ("Refused to load …"). */
 function collectCspViolations(page: Page): string[] {
@@ -66,6 +67,41 @@ test("B-10: API responses carry only the API's own security headers, never a sec
   for (const name of ['x-frame-options', 'x-content-type-options', 'referrer-policy']) {
     expect(values(name), name).toHaveLength(1);
   }
+  expect(values('x-frame-options')).toEqual(['DENY']);
+});
+
+/** `HSTS_POLICY` in apps/api/src/shared/security/security.ts, which nginx repeats for the pages. */
+const HSTS = 'max-age=31536000; includeSubDomains';
+const OVER_HTTPS = { 'x-forwarded-proto': 'https' };
+
+function hstsOf(headers: readonly ResponseHeader[]): string[] {
+  return headers
+    .filter((header) => header.name.toLowerCase() === 'strict-transport-security')
+    .map((header) => header.value);
+}
+
+test('ADR 0019: a client that claims https over plain http gets no HSTS, and the API still sees http', async ({
+  request,
+  baseURL,
+}) => {
+  // Every request from outside the web container is an ordinary client (docker-compose.e2e.yml), as in production.
+  expect(hstsOf((await request.get('/', { headers: OVER_HTTPS })).headersArray())).toEqual([]);
+
+  // B-03 compares Origin with <scheme>://<Host>: only the http origin is the API's own, so the claim was dropped.
+  const { csrfToken } = await getSessionViaApi(request);
+  const host = new URL(baseURL ?? '').host;
+  const post = (origin: string) =>
+    request.post('/api/nothing-here', { headers: { ...OVER_HTTPS, origin, 'x-csrf-token': csrfToken }, data: {} });
+  expect((await post(`http://${host}`)).status()).toBe(404);
+  const claimed = await post(`https://${host}`);
+  expect(claimed.status()).toBe(403);
+  expect(((await claimed.json()) as { code?: unknown }).code).toBe('cross-origin-request');
+});
+
+test('F-42 / ADR 0019: HSTS when the load balancer reports https, exactly one copy on pages and API responses', async () => {
+  expect(hstsOf(await getAsLoadBalancer('/'))).toEqual([]);
+  expect(hstsOf(await getAsLoadBalancer('/', OVER_HTTPS))).toEqual([HSTS]);
+  expect(hstsOf(await getAsLoadBalancer('/api/images?limit=1', OVER_HTTPS))).toEqual([HSTS]);
 });
 
 test('B-10: a response nginx generates itself under /api/ still carries the security headers', async ({ request }) => {

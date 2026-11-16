@@ -8,6 +8,7 @@ import type { ObjectStorage } from '../../shared/storage/object-storage.js';
 import { createImageProcessor } from './image-processor.js';
 import { createMediaController } from './media.controller.js';
 import { createMediaRouter } from './media.routes.js';
+import { MAX_ANIMATION_PIXELS } from './upload.config.js';
 import { createUploadService } from './upload.service.js';
 
 /** `images/<uuid>.<ext>` → `previews/<uuid>.webp` (ADR 0018). Pure; the seed scripts use it to check both objects. */
@@ -38,7 +39,7 @@ export function createUploadModule({ storage, logger, config, mediaLimiter, slee
   const port = createUploadService({
     storage,
     logger,
-    processor: createImageProcessor(config),
+    processor: createImageProcessor({ ...config, maxAnimationPixels: MAX_ANIMATION_PIXELS }),
     mediaPublicBaseUrl: config.mediaPublicBaseUrl,
     ...(sleep ? { sleep } : {}),
   });

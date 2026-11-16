@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  animationTooLarge,
   animationTooLong,
   fieldMessages,
   formatMegabytes,
@@ -54,6 +55,12 @@ describe('messages', () => {
 
   it('names the frame cap', () => {
     expect(animationTooLong(200)).toBe('Animated images can have at most 200 frames.');
+  });
+
+  it('names the animation pixel budget in megapixels', () => {
+    expect(animationTooLarge(100_000_000)).toBe(
+      'Animated images can have at most 100 megapixels in all frames together.',
+    );
   });
 
   it('formats limits with thousands separators', () => {

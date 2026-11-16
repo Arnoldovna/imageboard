@@ -29,3 +29,8 @@ services:
   # Compose concatenates `ports` across files; !override replaces 8080 so e2e can run next to `pnpm demo`.
   web:
     ports: !override ['127.0.0.1:${E2E_PORT:-8181}:8080']
+    environment:
+      # The TLS-terminating load balancer (ADR 0019) is 127.0.0.1 inside this container, which only the probe in
+      # e2e/support/stack.ts uses. Everything from outside, every browser and spec, stays an ordinary client whose
+      # X-Forwarded-Proto nginx ignores, exactly as with the production default.
+      TRUSTED_PROXY_CIDR: 127.0.0.1/32

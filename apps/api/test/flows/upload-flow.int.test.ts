@@ -1,4 +1,4 @@
-import { fieldMessages, fileMessages, ImageDto, requestMessages, uploadTooLarge } from '@app/shared';
+import { animationTooLarge, fieldMessages, fileMessages, ImageDto, requestMessages, uploadTooLarge } from '@app/shared';
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
 import request from 'supertest';
@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { images } from '../../src/db/schema/index.js';
 import { createFakeStorage, type FakeStorage } from '../fakes.js';
-import { apng, gif, htmlAsPng, jpegWithGps, oversize, pdf, png, svg, webp } from '../fixtures.js';
+import { animatedWebp, apng, gif, htmlAsPng, jpegWithGps, oversize, pdf, png, svg, webp } from '../fixtures.js';
 import { agentWithSession, problemOf, type SessionAgent } from '../http.js';
 import { createTestApp, type TestApp } from '../test-app.js';
 import { createTestDatabase, type TestDatabase, withDatabase } from '../test-db.js';
@@ -149,6 +149,21 @@ describe('upload flow: real upload module, fake object storage', () => {
     expect(problemOf(response)).toMatchObject({ code: 'payload-too-large', detail: uploadTooLarge(5 * 1024 * 1024) });
     expect(JSON.stringify(response.body)).not.toMatch(/MulterError|at .*\.js|stack/i);
     expectNothingStored(storage, before);
+  });
+
+  it('ADR 0005: an animation bomb under UPLOAD_MAX_BYTES is 400 invalid-image before decoding; nothing is stored', async () => {
+    const before = snapshot();
+    const rows = await rowCount(testApp);
+    // 200 frames of 6000 × 6000 in a few KB: each frame and the frame count pass, the 7.2 gigapixels in total do not.
+    const content = animatedWebp(200, { width: 6000, height: 6000 });
+
+    const response = await postImage(session, { content, filename: 'loop.webp', contentType: 'image/webp' });
+
+    expect(response.status).toBe(400);
+    // 100 MP: MAX_ANIMATION_PIXELS, the budget API.md documents.
+    expect(problemOf(response)).toMatchObject({ code: 'invalid-image', detail: animationTooLarge(100_000_000) });
+    expectNothingStored(storage, before);
+    expect(await rowCount(testApp)).toBe(rows);
   });
 
   it('B-11: a text part over 16 KiB is 400 on that field, a second file is 400 malformed; nothing is stored', async () => {
