@@ -332,7 +332,7 @@ B-49, B-56, B-60, B-69.
 | `apps/web/src/features/comments/index.ts` (keep exports)                                        |
 | `apps/web/src/features/comments/{comments.api,use-comments}.ts`                                 |
 | `apps/web/src/features/comments/components/{CommentsSection,CommentItem,CommentForm}.{vue,css}` |
-| `apps/web/src/features/comments/__tests__/{use-comments,CommentForm}.test.ts`                   |
+| `apps/web/src/features/comments/__tests__/{use-comments,CommentForm,CommentsSection}.test.ts`   |
 
 Responsibilities: `h3` "Comments"; list as `<ol>` of `<article>`; empty text "No comments yet. Start the
 conversation."; "show older comments" only with `nextCursor`; form Name ("Name (shown publicly)") then Comment,

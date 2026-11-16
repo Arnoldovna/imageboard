@@ -1,0 +1,43 @@
+@reference "#styles/main.css";
+
+/*
+ * Structure only (BUILD-ORDER 3.2); visual polish is phase 4. Image first on paper with a surface placeholder while it
+ * loads, then the text column: description as running text, a tracked meta line, then the owner's actions.
+ */
+@layer components {
+  .image-detail-body {
+    @apply flex flex-col gap-6;
+  }
+
+  .image-detail-body__frame {
+    @apply flex justify-center bg-surface;
+  }
+
+  .image-detail-body__image {
+    @apply block inline-full;
+
+    block-size: auto; /* keeps the aspect ratio from the width/height attributes */
+    object-fit: contain;
+  }
+
+  .image-detail-body__text {
+    @apply flex flex-col items-start gap-4;
+  }
+
+  .image-detail-body__description {
+    @apply m-0 text-body text-ink max-inline-prose;
+
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+
+  .image-detail-body__meta {
+    @apply m-0 text-meta text-ink-muted;
+
+    overflow-wrap: anywhere;
+  }
+
+  .image-detail-body__actions {
+    @apply pbs-2;
+  }
+}

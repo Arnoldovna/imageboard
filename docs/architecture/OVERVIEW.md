@@ -373,13 +373,13 @@ imageboard/
 │           │   ├── format/date.ts · format/bytes.ts     [S] Intl.DateTimeFormat('en-GB'), "5 MB"
 │           │   ├── format/__tests__/{date,bytes}.test.ts [S]
 │           │   └── ui/                                  [S] (BEM block per component, one CSS file each)
-│           │       ├── AppButton.vue · AppButton.css    variants: text (A), outlined (B), accent (B+accent)
+│           │       ├── AppButton.vue · AppButton.css    variants: text (A), outlined (B), accent (B+accent); busy (aria-disabled, keeps focus)
 │           │       ├── TextField.vue · TextField.css    label, hint, error, aria-describedby/aria-invalid; input|textarea
 │           │       ├── ModalDialog.vue · ModalDialog.css native <dialog>, showModal, cancel → emit close, own LiveAnnouncer region
 │           │       ├── ConfirmDialog.vue · ConfirmDialog.css
 │           │       ├── InlineError.vue · InlineError.css role="alert", "try again" button
 │           │       ├── EmptyState.vue · EmptyState.css
-│           │       └── __tests__/{TextField,ModalDialog,ConfirmDialog}.test.ts
+│           │       └── __tests__/{AppButton,TextField,ModalDialog,ConfirmDialog}.test.ts
 │           ├── features/
 │           │   ├── gallery/                             [F] index.ts + store public API are [S] stubs
 │           │   │   ├── index.ts                         export { GallerySection, useGalleryStore }
@@ -401,7 +401,7 @@ imageboard/
 │           │   │   ├── components/CommentsSection.vue · .css  h3 "Comments", list, older, form
 │           │   │   ├── components/CommentItem.vue · .css      "delete comment" + aria-describedby (author, time)
 │           │   │   ├── components/CommentForm.vue · .css
-│           │   │   └── __tests__/{use-comments.test.ts, CommentForm.test.ts}
+│           │   │   └── __tests__/{use-comments,CommentForm,CommentsSection}.test.ts
 │           │   └── upload/                              [F] index.ts is a [S] stub
 │           │       ├── index.ts                         export { UploadPanel }
 │           │       ├── upload.api.ts · use-upload-form.ts · client-file-check.ts
@@ -739,7 +739,7 @@ only (ADR 0020).
 | F-18, F-21, F-25                   | A         | `images.routes.int.test.ts`, `test/flows/upload-flow.int.test.ts` (nothing stored on 400, unknown fields 400, key ignores filename, `canDelete` true)                                                                                                                                                                                                                                   |
 | F-19, F-20, F-22                   | U + A + E | `image-sniffer.test.ts` (APNG → PNG), `image-processor.test.ts` (GPS EXIF gone, orientation, dimensions, 150-frame GIF accepted, 201 frames rejected, preview), `upload-flow.int.test.ts` (415 svg/html/pdf/renamed, 413, field > 16 KiB → field error, CRLF description at the limit accepted), `client-file-check.test.ts`, `e2e/upload.spec.ts` (client message, `accept` attribute) |
 | F-23                               | U + A     | `upload.service.test.ts`, `images.service.test.ts` (compensation), `upload-flow.int.test.ts` (failing fake storage → no row; failing insert → no object)                                                                                                                                                                                                                                |
-| F-26, F-28, F-30, F-33             | U + E     | `use-comments.test.ts`, `CommentForm.test.ts`, `e2e/comments.spec.ts`                                                                                                                                                                                                                                                                                                                   |
+| F-26, F-28, F-30, F-33             | U + E     | `use-comments.test.ts`, `CommentForm.test.ts`, `CommentsSection.test.ts`, `e2e/comments.spec.ts`                                                                                                                                                                                                                                                                                        |
 | F-27, F-29, F-31, F-32             | A + E     | `comments.routes.int.test.ts`, `comments.repository.int.test.ts`, `e2e/comments.spec.ts`                                                                                                                                                                                                                                                                                                |
 | F-34, F-39                         | A         | `features/session/__tests__/session.int.test.ts` (provisional 24 h → 180 days after first post), every `*.routes.int.test.ts` (CSRF missing → 403)                                                                                                                                                                                                                                      |
 | F-35, F-36                         | A + E     | `images.routes.int.test.ts`, `delete-flow.int.test.ts`, `media.routes.int.test.ts`, `e2e/delete.spec.ts`                                                                                                                                                                                                                                                                                |

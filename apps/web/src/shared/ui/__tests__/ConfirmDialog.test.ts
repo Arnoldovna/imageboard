@@ -64,12 +64,30 @@ describe('ConfirmDialog', () => {
     expect(view.emitted('confirm')).toBeUndefined();
   });
 
-  it('disables the confirm button while busy and shows the busy label', () => {
-    renderConfirm({ busy: true, busyLabel: 'deleting…' });
+  it('disables the confirm button while busy and shows the busy label', async () => {
+    const view = renderConfirm({ busy: true, busyLabel: 'deleting…' });
 
     const confirm = screen.getByRole<HTMLButtonElement>('button', { name: 'deleting…' });
-    expect(confirm.disabled).toBe(true);
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'cancel' }).disabled).toBe(false);
+    expect(confirm.getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'cancel' }).hasAttribute('aria-disabled')).toBe(false);
+
+    await userEvent.click(confirm);
+    expect(view.emitted('confirm')).toBeUndefined();
+  });
+
+  it('keeps focus on the confirm button while busy and after a failure (WCAG 2.4.3)', async () => {
+    const view = renderConfirm();
+    const confirm = screen.getByRole<HTMLButtonElement>('button', { name: 'delete' });
+
+    await userEvent.click(confirm);
+    expect(document.activeElement).toBe(confirm);
+    await view.rerender({ busy: true, busyLabel: 'deleting…' });
+    expect(confirm.disabled).toBe(false);
+    expect(document.activeElement).toBe(confirm);
+
+    await view.rerender({ busy: false, error: 'Too many requests. Wait a moment and try again.' });
+    expect(document.activeElement).toBe(confirm);
+    expect(screen.getByRole('alert')).toBeTruthy();
   });
 
   it('shows a failure as an alert and stays open for another try', () => {

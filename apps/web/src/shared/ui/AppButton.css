@@ -11,11 +11,13 @@
     text-decoration-thickness: var(--rule-width);
     text-underline-offset: var(--underline-offset);
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled, [aria-disabled='true']) {
       text-decoration-thickness: var(--rule-width-strong);
     }
 
-    &:disabled {
+    /* `aria-disabled` is the `busy` state: the button keeps focus while its action runs (AppButton.vue). */
+    &:disabled,
+    &[aria-disabled='true'] {
       @apply text-ink-muted cursor-not-allowed;
     }
 
@@ -31,8 +33,13 @@
 
     border: var(--rule-width) solid var(--color-ink);
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled, [aria-disabled='true']) {
       @apply bg-ink text-paper;
+    }
+
+    &:disabled,
+    &[aria-disabled='true'] {
+      border-color: var(--color-ink-muted);
     }
   }
 
@@ -42,11 +49,12 @@
 
     border: var(--rule-width) solid var(--color-on-accent);
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled, [aria-disabled='true']) {
       @apply bg-ink text-paper;
     }
 
-    &:disabled {
+    &:disabled,
+    &[aria-disabled='true'] {
       @apply text-on-accent;
     }
   }

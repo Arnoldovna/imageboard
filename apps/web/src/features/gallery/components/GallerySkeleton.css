@@ -1,0 +1,60 @@
+@reference "#styles/main.css";
+
+/*
+ * GallerySkeleton: static surface blocks in the gallery grid (no shimmer, maw §8). The grid repeats
+ * `.gallery-section__grid`; its container is the `.gallery-section` block around this component.
+ */
+@layer components {
+  .gallery-skeleton {
+    @apply flex flex-col gap-6;
+  }
+
+  .gallery-skeleton__label {
+    @apply m-0 text-meta text-ink-muted;
+  }
+
+  .gallery-skeleton__grid {
+    @apply m-0 p-0 grid grid-cols-1 gap-x-5 gap-y-10;
+
+    list-style: none;
+
+    @variant @row {
+      @apply grid-cols-2;
+    }
+
+    @variant @wide {
+      @apply grid-cols-3;
+    }
+
+    @variant @gallery-4 {
+      @apply grid-cols-4;
+    }
+  }
+
+  .gallery-skeleton__tile {
+    @apply flex flex-col;
+  }
+
+  .gallery-skeleton__frame {
+    @apply block bg-surface aspect-media;
+  }
+
+  .gallery-skeleton__caption {
+    @apply flex flex-col gap-1 pbs-3 pbe-3 border-be border-rule;
+  }
+
+  /* One line box of the tile's title and meta type, so the caption is as tall as the real one. */
+  .gallery-skeleton__title {
+    @apply block text-title-s bg-surface;
+
+    block-size: 1lh;
+    inline-size: 75%;
+  }
+
+  .gallery-skeleton__meta {
+    @apply block text-meta bg-surface;
+
+    block-size: 1lh;
+    inline-size: 40%;
+  }
+}

@@ -1,7 +1,7 @@
 import type { ImageDto } from '@app/shared';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { createPinia, setActivePinia, type Pinia } from 'pinia';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import { createMemoryHistory, type Router } from 'vue-router';
 
@@ -10,6 +10,7 @@ import { ImageDetailDialog } from '../../features/image-detail/index';
 import { UploadPanel } from '../../features/upload/index';
 import App from '../App.vue';
 import { createAppRouter } from '../router';
+import { stubApi } from './fake-api';
 
 /**
  * HomePage is where features meet (ADR 0010): these tests drive the features' public events and exposed methods
@@ -47,12 +48,14 @@ async function mountAt(path: string): Promise<VueWrapper> {
 beforeEach(() => {
   pinia = createPinia();
   setActivePinia(pinia);
+  stubApi([image(1, 'Harbour at dawn'), image(2, 'Fog over the pines')]);
 });
 
 afterEach(() => {
   wrapper?.unmount();
   wrapper = undefined;
   document.body.innerHTML = '';
+  vi.unstubAllGlobals();
 });
 
 describe('HomePage wiring', () => {
@@ -109,7 +112,11 @@ describe('HomePage wiring', () => {
     await flushPromises();
 
     expect(app.findComponent(ImageDetailDialog).exists()).toBe(false);
-    expect(document.activeElement?.textContent.trim()).toBe('Harbour at dawn');
+    // Assert the accessible name (aria-labelledby, else text), not the tile's full text: the tile also shows meta.
+    const focused = document.activeElement;
+    const labelId = focused?.getAttribute('aria-labelledby');
+    const name = labelId ? document.getElementById(labelId)?.textContent : focused?.textContent;
+    expect(name?.trim()).toBe('Harbour at dawn');
   });
 
   it('focuses the "Gallery" heading when the tile is not loaded (deep link) or was deleted', async () => {

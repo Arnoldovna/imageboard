@@ -37,6 +37,12 @@ fixes Vue 3 + Pinia + Vue Router.
   emits `request-upload` on its empty-state button → `uploadPanel.open()` (exposed method); after the dialog
   unmounts → `gallerySection.focusTile(id)`. Features stay independent; the gallery store is the only feature API
   that `app/` calls.
+- **Busy controls keep focus** (phase 3 review, FEATURES §14 R-10): a button whose request is running ("loading…",
+  "posting…", "Uploading…", "deleting…") is `AppButton` with `busy`: `aria-disabled="true"` and its clicks are
+  swallowed (a busy submit does not submit). Assistive technology still reports it as disabled, but unlike native
+  `disabled` it keeps keyboard focus (WCAG 2.4.3). Native `disabled` is only for an action that is unavailable.
+  Forms stay editable while their request runs; reset-on-success empties the values that were sent and keeps
+  anything entered meanwhile, so no input is lost without notice.
 - No optimistic insert on upload (we need the server DTO with `url` and dimensions); delete removes the item **after**
   the `204`, so a failed delete leaves the item and shows an error (F-37).
 - Responses are validated at runtime: a missing or mistyped field becomes a visible error state instead of a broken

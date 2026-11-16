@@ -1,0 +1,12 @@
+@reference "#styles/main.css";
+
+/* Structure only (BUILD-ORDER 3.2); visual polish is phase 4. The button is a maw text button (AppButton). */
+@layer components {
+  .delete-image-control {
+    @apply flex flex-col items-start gap-3;
+  }
+
+  .delete-image-control__button {
+    @apply shrink-0;
+  }
+}

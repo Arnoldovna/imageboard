@@ -11,7 +11,9 @@ import ModalDialog from './ModalDialog.vue';
  * on "cancel", so Enter or Space right after opening never destroys anything. Esc counts as cancel.
  *
  * The owner keeps it mounted while the action runs (`busy`) and shows a failure through `error`; the dialog stays
- * open then, so the person can retry or cancel.
+ * open then, so the person can retry or cancel. While busy the confirm button is an AppButton in its `busy` state:
+ * it was just pressed and keeps focus inside the dialog (WCAG 2.4.3), and its clicks are ignored, so a double press
+ * never confirms twice.
  */
 const props = withDefaults(
   defineProps<{
@@ -41,7 +43,7 @@ const confirmText = computed(() => (props.busy ? (props.busyLabel ?? props.confi
       <InlineError v-if="error !== null" :message="error" :retryable="false" />
       <div class="confirm-dialog__actions">
         <AppButton autofocus @click="emit('cancel')">{{ cancelLabel }}</AppButton>
-        <AppButton variant="outlined" :disabled="busy" @click="emit('confirm')">{{ confirmText }}</AppButton>
+        <AppButton variant="outlined" :busy="busy" @click="emit('confirm')">{{ confirmText }}</AppButton>
       </div>
     </div>
   </ModalDialog>

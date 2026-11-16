@@ -1,0 +1,12 @@
+@reference "#styles/main.css";
+
+/* Stacked fields at prose width; the submit sits below them, left-aligned like every maw action. */
+@layer components {
+  .comment-form {
+    @apply flex flex-col gap-5 max-inline-prose;
+  }
+
+  .comment-form__actions {
+    @apply flex items-center gap-6 pbs-1;
+  }
+}

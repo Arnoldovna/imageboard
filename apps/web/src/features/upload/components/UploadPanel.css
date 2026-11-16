@@ -1,6 +1,6 @@
 @reference "#styles/main.css";
 
-/* Placeholder structure; the upload module (BUILD-ORDER 3.4, 4.2) owns this file and keeps the sticky mechanics. */
+/* Sticky one-row bar plus the form in normal flow below it (ADR 0012, F-57); visual polish in phase 4 (BUILD-ORDER 4.2). */
 @layer components {
   /* No box of its own: the bar and the body become children of HomePage's container (ADR 0012). */
   .upload-panel {
@@ -36,9 +36,5 @@
 
   .upload-panel__body {
     @apply pbs-6 pbe-10 border-be border-rule;
-  }
-
-  .upload-panel__note {
-    @apply m-0 text-body text-ink-muted;
   }
 }

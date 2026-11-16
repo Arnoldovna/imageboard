@@ -1,12 +1,13 @@
 import { cleanup, render, screen, within } from '@testing-library/vue';
 import userEvent from '@testing-library/user-event';
 import { createPinia } from 'pinia';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMemoryHistory } from 'vue-router';
 
 import App from '../App.vue';
 import { PROFILE_LINKS } from '../layout/profile-links';
 import { createAppRouter } from '../router';
+import { stubApi } from './fake-api';
 
 async function renderApp(path = '/') {
   const router = createAppRouter(createMemoryHistory());
@@ -16,8 +17,13 @@ async function renderApp(path = '/') {
   return { ...result, router };
 }
 
+beforeEach(() => {
+  stubApi();
+});
+
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 describe('App shell', () => {

@@ -1,12 +1,44 @@
 @reference "#styles/main.css";
 
-/* Placeholder structure only; the image-detail module (BUILD-ORDER 3.2, 4.2) owns this file. */
+/*
+ * Structure only (BUILD-ORDER 3.2); visual polish is phase 4. The dialog frame, heading and "close" come from the
+ * shared ModalDialog; this file lays out the states inside its body.
+ */
 @layer components {
-  .image-detail-dialog {
-    @apply flex flex-col gap-6;
+  .image-detail-dialog__loading {
+    @apply flex flex-col gap-4;
+  }
+
+  /* A flat surface block where the image will be (no shimmer, maw §8). */
+  .image-detail-dialog__placeholder {
+    @apply inline-full bg-surface aspect-media;
+  }
+
+  .image-detail-dialog__missing {
+    @apply flex flex-col items-start gap-4;
   }
 
   .image-detail-dialog__note {
-    @apply m-0 text-body text-ink-muted;
+    @apply m-0 text-body text-ink max-inline-prose;
+  }
+
+  .image-detail-dialog__back {
+    @apply text-body text-ink underline;
+
+    text-decoration-thickness: var(--rule-width);
+    text-underline-offset: var(--underline-offset);
+
+    @variant hover {
+      text-decoration-thickness: var(--rule-width-strong);
+    }
+  }
+
+  /* inline-block keeps the link's underline off the arrow glyph. */
+  .image-detail-dialog__arrow {
+    @apply inline-block me-2;
+  }
+
+  .image-detail-dialog__content {
+    @apply flex flex-col gap-12;
   }
 }

@@ -149,7 +149,7 @@ and a catch-all 404 page.
   (B-46).
 - **F-06** (new) [E]: While the first page loads, the grid shows a loading state (`aria-busy="true"` with
   skeleton tiles or a spinner with an accessible label). While "Load more" is in flight the button is disabled and
-  reads "Loading…".
+  reads "Loading…". _(Annotated, §14 R-10: disabled means busy, `aria-disabled`, so the button keeps focus.)_
 - **F-07** (new) [E]: With zero images the gallery shows the empty state "No images yet. Be the first to upload
   one." and moves focus or a link to the upload form. The page does not crash (B-46).
 - **F-08** (new) [E]: If loading the gallery or the next page fails, an inline error message with a "Try again"
@@ -209,6 +209,7 @@ and a catch-all 404 page.
   reachable and operable by keyboard and shows the chosen filename plus a preview. While uploading, the submit
   button is disabled and reads "Uploading…" (no double submit). On success **all** fields including the file are
   reset, and "Image uploaded." is announced through a live region. On failure the entered values are kept (B-54).
+  _(Annotated, §14 R-10: the submit is busy, `aria-disabled`; a value entered while the upload ran is kept.)_
 - **F-25** (new) [A]: The uploaded image belongs to the uploader's anonymous session (F-34). In the `201`
   response, `canDelete` is `true`.
 
@@ -228,7 +229,7 @@ and a catch-all 404 page.
 - **F-32** (new) [A][E]: The session that wrote a comment can delete it (`204`). Any other session gets `403`.
   The UI shows the delete control only when `canDelete` is `true`.
 - **F-33** (new) [E]: The comment form is a `<form>` with labels. Submit is disabled while sending. The form resets
-  on success and keeps its values on error (B-55).
+  on success and keeps its values on error (B-55). _(Annotated, §14 R-10: as F-24.)_
 
 ## 8. Ownership, sessions and deletion ("auth flows")
 
@@ -351,17 +352,19 @@ anonymous sessions instead:
 
 ## 14. Revisions from the architecture review
 
-The architecture critique (Etappe 1, round 1) changed or annotated these criteria. Each change is justified in the
-ADR named; the criteria above carry a "revised" or "annotated" marker pointing here.
+The architecture critique (Etappe 1, round 1) changed or annotated these criteria; R-10 comes from the phase 3 code
+review. Each change is justified in the ADR named; the criteria above carry a "revised" or "annotated" marker
+pointing here.
 
-| #    | Criteria        | Change                                                                                                                                      | ADR           |
-| ---- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| R-01 | F-34            | Sessions that never created content are provisional (24 h); full lifetime after the first upload or comment; identity creation rate-limited | 0002          |
-| R-02 | F-40            | Extra limiters: media (1200 / 5 min), identities (20 / h), global uploads (200 / day); health not limited (not public)                      | 0013          |
-| R-03 | F-57            | Only a one-row bar is sticky; the form opens in normal flow on every width (was: whole form sticky on ≥ md)                                 | 0012          |
-| R-04 | F-56            | Announcements go to a live region inside the open dialog                                                                                    | 0010, 0011    |
-| R-05 | F-03, F-55      | Tile image `alt=""`, tile link named by the title via `aria-labelledby`; dialog image keeps `alt` = title                                   | 0012          |
-| R-06 | §3.2, F-22, §13 | One WebP preview rendition per image; `ImageDto.previewUrl`                                                                                 | 0018          |
-| R-07 | F-19            | APNG accepted as PNG (stored as static PNG)                                                                                                 | 0005          |
-| R-08 | §3.2, F-47      | `/api/health` internal only, cached 3 s                                                                                                     | 0013          |
-| R-09 | F-58            | Profile URLs in one constant to be confirmed by Marina                                                                                      | OVERVIEW §8.3 |
+| #    | Criteria         | Change                                                                                                                                                         | ADR           |
+| ---- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| R-01 | F-34             | Sessions that never created content are provisional (24 h); full lifetime after the first upload or comment; identity creation rate-limited                    | 0002          |
+| R-02 | F-40             | Extra limiters: media (1200 / 5 min), identities (20 / h), global uploads (200 / day); health not limited (not public)                                         | 0013          |
+| R-03 | F-57             | Only a one-row bar is sticky; the form opens in normal flow on every width (was: whole form sticky on ≥ md)                                                    | 0012          |
+| R-04 | F-56             | Announcements go to a live region inside the open dialog                                                                                                       | 0010, 0011    |
+| R-05 | F-03, F-55       | Tile image `alt=""`, tile link named by the title via `aria-labelledby`; dialog image keeps `alt` = title                                                      | 0012          |
+| R-06 | §3.2, F-22, §13  | One WebP preview rendition per image; `ImageDto.previewUrl`                                                                                                    | 0018          |
+| R-07 | F-19             | APNG accepted as PNG (stored as static PNG)                                                                                                                    | 0005          |
+| R-08 | §3.2, F-47       | `/api/health` internal only, cached 3 s                                                                                                                        | 0013          |
+| R-09 | F-58             | Profile URLs in one constant to be confirmed by Marina                                                                                                         | OVERVIEW §8.3 |
+| R-10 | F-06, F-24, F-33 | "Disabled" while a request runs is `aria-disabled` (busy, clicks ignored), so the pressed button keeps focus; a reset on success keeps input entered meanwhile | 0010          |

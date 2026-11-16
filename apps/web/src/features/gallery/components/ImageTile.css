@@ -1,0 +1,56 @@
+@reference "#styles/main.css";
+
+/*
+ * ImageTile: no card box. The preview in a 16/10 frame on the surface colour, then the caption like a stacked maw
+ * list row: title, meta (author, date), and a 1px rule that turns ink on hover and focus (ADR 0012).
+ */
+@layer components {
+  .image-tile {
+    @apply flex flex-col text-ink no-underline;
+  }
+
+  .image-tile__frame {
+    @apply block overflow-hidden bg-surface aspect-media;
+  }
+
+  .image-tile__image {
+    @apply block inline-full block-full object-cover;
+  }
+
+  .image-tile__caption {
+    @apply flex flex-col gap-1 pbs-3 pbe-3 border-be border-rule;
+
+    .image-tile:hover &,
+    .image-tile:focus-visible & {
+      @apply border-rule-strong;
+    }
+
+    @variant motion-safe {
+      transition: border-color var(--duration-fast) var(--ease-standard);
+    }
+  }
+
+  .image-tile__title {
+    @apply text-title-s font-regular;
+
+    overflow-wrap: anywhere;
+
+    @variant motion-safe {
+      .image-tile:hover & {
+        @apply animate-shake;
+      }
+    }
+  }
+
+  .image-tile__meta {
+    @apply flex flex-wrap gap-x-4 gap-y-1 text-meta text-ink-muted;
+  }
+
+  .image-tile__author {
+    overflow-wrap: anywhere;
+  }
+
+  .image-tile__date {
+    font-variant-numeric: tabular-nums;
+  }
+}
