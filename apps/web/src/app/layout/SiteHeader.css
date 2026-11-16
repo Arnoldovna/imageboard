@@ -1,16 +1,33 @@
 @reference "#styles/main.css";
 
-/* maw site header: wordmark left, tagline right; sticky from sm up with the one allowed gradient (--header-fade). */
+/*
+ * maw site header: wordmark left, tagline right. Sticky from sm up (F-57); below sm it scrolls away, so on phones only
+ * the one-row upload bar stays pinned.
+ *
+ * The sticky header is solid paper and the one allowed gradient (--header-fade) is a short edge BELOW it. The maw
+ * default fades the whole header, which works over text rows, but here photos scroll underneath: they would show
+ * through behind the ink wordmark and its contrast could no longer be guaranteed (F-52). On the home page the upload
+ * bar (same layer, later in the DOM) paints over the edge, so the two pinned rows read as one block; on other pages
+ * the edge fades the content as it scrolls under the header.
+ */
 @layer components {
   .site-header {
     @apply flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 pbs-8 pbe-6 ps-3 pe-3;
 
     @variant sm {
-      @apply sticky pbs-12 pbe-6 ps-5 pe-5;
+      @apply sticky pbs-12 pbe-6 ps-5 pe-5 bg-paper;
 
       inset-block-start: 0;
       z-index: var(--layer-header);
-      background-image: var(--header-fade);
+    }
+  }
+
+  /* The fade edge (styles/utilities.css), only while the header is pinned. */
+  .site-header::after {
+    @variant sm {
+      @apply fade-edge;
+
+      inset-block-start: 100%;
     }
   }
 
@@ -29,6 +46,7 @@
   .site-header__brand {
     @apply inline-block text-ink no-underline;
 
+    /* @variant hover = :hover inside @media (hover: hover), so the shake never sticks after a tap. */
     @variant hover {
       @variant motion-safe {
         @apply animate-shake;
@@ -36,7 +54,7 @@
     }
   }
 
-  /* Ink, not muted: on >= sm it sits in the fading part of the header, over whatever scrolls beneath. */
+  /* Legacy tagline (F-59): small tracked meta, ink (primary meta stays ink, maw §6). */
   .site-header__tagline {
     @apply m-0 text-meta text-ink;
   }

@@ -4,16 +4,24 @@
  * GallerySection: heading, then the tile grid, then "load more". The section is the size container; the grid goes
  * 1 → 2 (@row) → 3 (@wide) → 4 (@gallery-4) columns by the section's width (ADR 0012, F-10). A container query never
  * matches the element that declares the container, so the query sits on `__grid`.
+ *
+ * Rhythm: 24px from the heading to the grid (they belong together), 40px between tile rows, and "load more" sits
+ * one row gap below the last tile, so it reads as the end of the list rather than as part of a tile caption.
  */
 @layer components {
   .gallery-section {
-    @apply flex flex-col gap-8 pbs-12 pbe-16;
+    @apply flex flex-col gap-6 pbs-12 pbe-16;
 
     container-type: inline-size;
   }
 
+  /* Below sm the wordmark is 31px too, so the h2 steps down one size to sit under the h1 (heading scale). */
   .gallery-section__heading {
-    @apply m-0 text-title font-regular;
+    @apply m-0 text-title-s font-regular;
+
+    @variant sm {
+      @apply text-title;
+    }
   }
 
   .gallery-section__grid {
@@ -40,6 +48,6 @@
   }
 
   .gallery-section__more {
-    @apply flex flex-col items-start gap-4;
+    @apply flex flex-col items-start gap-4 pbs-4;
   }
 }

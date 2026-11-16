@@ -4,6 +4,7 @@ import { onBeforeUnmount, onMounted, useId, useTemplateRef } from 'vue';
 import { useAnnouncerStore } from '../a11y/announcer.store';
 import LiveAnnouncer from '../a11y/LiveAnnouncer.vue';
 import { useFocusReturn } from '../a11y/use-focus-return';
+import { usePublishedBlockSize } from '../dom/use-published-block-size';
 import AppButton from './AppButton.vue';
 
 /**
@@ -16,6 +17,9 @@ import AppButton from './AppButton.vue';
  * - Its own polite live region is registered with the announcer while open, because App.vue's region is inert
  *   behind a modal dialog (F-56, ADR 0010).
  * - On unmount focus returns to the element that was focused before opening, if it still exists.
+ * - The dialog scrolls with a pinned header ("close" stays in reach). The header's height (it grows with a long
+ *   title) is published on the dialog as `--modal-dialog-header-block-size`, so the dialog's scroll padding keeps
+ *   focused content clear of it (WCAG 2.4.11, ModalDialog.css).
  */
 const props = withDefaults(
   defineProps<{
@@ -34,6 +38,7 @@ const emit = defineEmits<{ close: [] }>();
 defineSlots<{ default(): unknown }>();
 
 const dialog = useTemplateRef<HTMLDialogElement>('dialog');
+const header = useTemplateRef<HTMLElement>('header');
 const titleId = useId();
 const regionId = `dialog-${useId()}`;
 const announcer = useAnnouncerStore();
@@ -45,6 +50,9 @@ onMounted(() => {
   announcer.pushRegion(regionId);
   dialog.value?.showModal();
 });
+
+// Registered after the hook above, so the header is measured once the dialog is open (a closed dialog has no size).
+usePublishedBlockSize(header, '--modal-dialog-header-block-size', dialog);
 
 onBeforeUnmount(() => {
   unmounting = true;
@@ -76,7 +84,7 @@ function onClose(): void {
     @cancel="onCancel"
     @close="onClose"
   >
-    <div class="modal-dialog__header">
+    <div ref="header" class="modal-dialog__header">
       <h2 :id="titleId" class="modal-dialog__title">{{ title }}</h2>
       <AppButton v-if="showClose" class="modal-dialog__close" @click="emit('close')">{{ closeLabel }}</AppButton>
     </div>

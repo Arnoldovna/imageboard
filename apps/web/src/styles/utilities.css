@@ -1,7 +1,64 @@
 /*
- * Project-wide helper classes. Keep this file tiny.
- * These are BEM blocks (used in markup), not Tailwind utilities.
+ * Project-wide helpers. Keep this file tiny.
+ *
+ * 1. Custom Tailwind utilities (`@utility`): shared declaration blocks for maw patterns that several components
+ *    need but cannot get from one shared component. They are used ONLY through `@apply` in component CSS, never
+ *    as classes in markup (the markup stays BEM, checked by scripts/check-no-utilities.mjs).
+ * 2. BEM blocks used in markup (`@layer components`).
  */
+
+/*
+ * maw button A (§6): ink text with a 1px underline that becomes 2px on hover. AppButton (a `<button>`) and the text
+ * links (a `<button>` cannot be a link) share it. Hover only on devices that can hover, so nothing sticks after a
+ * tap. The colour transition serves AppButton's disabled/busy state.
+ */
+@utility link-underlined {
+  text-decoration-line: underline;
+  text-decoration-thickness: var(--rule-width);
+  text-underline-offset: var(--underline-offset);
+
+  @variant hover {
+    text-decoration-thickness: var(--rule-width-strong);
+  }
+
+  @variant motion-safe {
+    transition-property: color, text-decoration-thickness;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-standard);
+  }
+}
+
+/*
+ * maw button B (§6): an outlined rectangle, 1px ink, no radius. AppButton's outlined and accent variants and the
+ * FilePicker's stand-in button (a span inside the file input's label, so it cannot be AppButton) share it. The
+ * inverted hover state stays with each component, because what is hovered differs (the button, or the label).
+ */
+@utility button-outlined {
+  @apply pbs-3 pbe-3 ps-6 pe-6 no-underline;
+
+  border: var(--rule-width) solid var(--color-ink);
+
+  @variant motion-safe {
+    transition-property: color, background-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-standard);
+  }
+}
+
+/*
+ * The one allowed gradient (maw §8): a short paper fade under a pinned row (SiteHeader, the upload bar), so content
+ * fades out as it scrolls underneath instead of being cut off hard. Apply it to the row's `::after`; the row sets
+ * `inset-block-start`. Decorative only: it lets clicks through.
+ */
+@utility fade-edge {
+  position: absolute;
+  inset-inline: 0;
+  block-size: var(--header-fade-block-size);
+  background-image: var(--header-fade);
+  pointer-events: none;
+  content: '';
+}
+
 @layer components {
   /* Hidden visually, still read by screen readers (labels of the native file input, extra context). */
   .visually-hidden {
@@ -14,16 +71,21 @@
     margin: calc(var(--rule-width) * -1);
   }
 
-  /* First focusable element of the page; slides in on keyboard focus (App.vue). */
+  /*
+   * First focusable element of the page; slides in on keyboard focus (App.vue). It sits one focus-ring width
+   * (outline + offset) in from the corner, so the whole 2px ring stays on screen. While hidden it moves up by its own
+   * height plus twice that distance: its box has a fractional height, and a box ending exactly at the viewport edge
+   * anti-aliases its 1px bottom border into the first pixel row (a stray line on every page in the 4.3 review).
+   */
   .skip-link {
     @apply bg-paper text-ink text-meta pbs-2 pbe-2 ps-4 pe-4;
 
     position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
+    inset-block-start: calc(var(--focus-width) + var(--focus-offset));
+    inset-inline-start: calc(var(--focus-width) + var(--focus-offset));
     z-index: var(--layer-toast);
     border: var(--rule-width) solid var(--color-ink);
-    translate: 0 -100%;
+    translate: 0 calc(-100% - 2 * (var(--focus-width) + var(--focus-offset)));
   }
 
   .skip-link:focus-visible {

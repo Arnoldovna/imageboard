@@ -1,8 +1,10 @@
 @reference "#styles/main.css";
 
 /*
- * Structure of the image field (BUILD-ORDER 3.4; visual polish in phase 4): label row like TextField, an outlined
- * maw button (B) made from the label, hint, chosen file with a small preview, error with a 2px error rule.
+ * Image field (F-24, B-67): label row like TextField, an outlined maw button (B) made from the label, hint, the
+ * chosen file with a small preview, and an error with a 2px error rule. The button cannot be AppButton (it is a span
+ * inside the label that opens the native picker), so it shares AppButton's outlined look through the
+ * `button-outlined` utility (styles/utilities.css) instead of repeating it.
  */
 @layer components {
   .file-picker {
@@ -18,8 +20,9 @@
     @apply flex items-baseline justify-between gap-4 self-stretch;
   }
 
+  /* Lowercase through CSS like TextField's label (maw §10); the accessible name keeps the markup's "Image". */
   .file-picker__label {
-    @apply text-meta text-ink-muted;
+    @apply text-meta text-ink-muted lowercase;
   }
 
   .file-picker__marker {
@@ -27,9 +30,7 @@
   }
 
   .file-picker__button {
-    @apply pbs-2 pbe-2 ps-4 pe-4 text-body text-ink bg-paper;
-
-    border: var(--rule-width) solid var(--color-ink);
+    @apply button-outlined text-body text-ink bg-paper;
 
     /* Pointer devices only, so the inverted state never sticks after a tap. */
     @media (hover: hover) {
@@ -51,10 +52,15 @@
 
   .file-picker__selection {
     @apply flex items-center gap-4 pbs-2;
+
+    @variant motion-safe {
+      @apply animate-fade-in;
+    }
   }
 
+  /* Fixed thumbnail width: a long file name wraps beside it instead of squeezing it. */
   .file-picker__preview {
-    @apply aspect-media bg-surface;
+    @apply shrink-0 aspect-media bg-surface;
 
     inline-size: --spacing(32);
     object-fit: contain;

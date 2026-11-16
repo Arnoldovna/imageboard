@@ -370,6 +370,7 @@ imageboard/
 │           │   ├── a11y/announcer.store.ts · LiveAnnouncer.vue · LiveAnnouncer.css [S] aria-live="polite", region stack (top-most dialog wins)
 │           │   ├── a11y/use-focus-return.ts             [S]
 │           │   ├── dom/use-document-title.ts            [S]
+│           │   ├── dom/use-published-block-size.ts      measured height of a pinned row as a root custom property (header, upload bar)
 │           │   ├── format/date.ts · format/bytes.ts     [S] Intl.DateTimeFormat('en-GB'), "5 MB"
 │           │   ├── format/__tests__/{date,bytes}.test.ts [S]
 │           │   └── ui/                                  [S] (BEM block per component, one CSS file each)
@@ -413,7 +414,7 @@ imageboard/
 │               ├── main.css                             [S] @import "tailwindcss" source(none); tokens; base; utilities
 │               ├── tokens.css                           [S] maw tokens verbatim, --color-accent: var(--color-sky) (+1 container token, ADR 0012)
 │               ├── base.css                             [S] @layer base, focus-visible, :root:has(dialog[open]) scroll lock
-│               └── utilities.css                        [S] .visually-hidden, .skip-link
+│               └── utilities.css                        [S] .visually-hidden, .skip-link; @utility link-underlined, button-outlined, fade-edge (only via @apply)
 ├── packages/shared/
 │   ├── package.json · tsconfig.json · tsconfig.build.json · vitest.config.ts [S]
 │   └── src/

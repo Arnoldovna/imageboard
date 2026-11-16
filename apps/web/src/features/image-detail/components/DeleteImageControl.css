@@ -1,12 +1,17 @@
 @reference "#styles/main.css";
 
-/* Structure only (BUILD-ORDER 3.2); visual polish is phase 4. The button is a maw text button (AppButton). */
+/*
+ * Owner action under the meta line: a maw text button (AppButton, lowercase verb first), never a red or filled
+ * "danger" button. A late error sits right under it with the 2px error rule from InlineError (colour is never the only
+ * signal, maw §4). The confirmation is its own modal dialog and is styled by ConfirmDialog.
+ */
 @layer components {
   .delete-image-control {
-    @apply flex flex-col items-start gap-3;
+    @apply flex flex-col gap-3;
   }
 
+  /* The button keeps its natural width (its underline spans the label only); the error below takes the full row. */
   .delete-image-control__button {
-    @apply shrink-0;
+    @apply self-start;
   }
 }

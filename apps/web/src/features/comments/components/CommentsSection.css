@@ -1,17 +1,22 @@
 @reference "#styles/main.css";
 
-/* Section label (maw §6) above the form; the list is a stack of rows separated by 1px rules, no boxes. */
+/*
+ * Comments inside the image detail dialog (F-26 to F-31). Section label (maw §6) above the form, then the list as maw
+ * rows separated by 1px rules, no boxes. Rhythm is deliberately uneven: 20px from label to form, 40px from the form to
+ * the list, 12px inside a row (CommentItem.css).
+ */
 @layer components {
   .comments-section {
-    @apply flex flex-col gap-6 pbs-8;
+    @apply flex flex-col gap-5 pbs-8;
   }
 
+  /* Lowercase only through CSS: the markup keeps "Comments" in sentence case for screen readers (B-74). */
   .comments-section__heading {
-    @apply m-0 pbe-1 text-caption font-medium border-be border-ink-muted;
+    @apply m-0 pbe-1 text-caption font-medium text-ink lowercase border-be border-ink-muted;
   }
 
   .comments-section__content {
-    @apply flex flex-col gap-4;
+    @apply flex flex-col items-start gap-5 pbs-5;
   }
 
   .comments-section__status {
@@ -19,16 +24,33 @@
   }
 
   .comments-section__list {
-    @apply m-0 p-0 border-bs border-rule;
+    @apply m-0 p-0 self-stretch border-bs border-rule;
 
     list-style: none;
   }
 
+  /*
+   * Each entry is the size container for its CommentItem, which goes from stacked to body-left / meta-right at @row
+   * (36rem). A container query never matches the element that declares it, so the query sits in CommentItem.css.
+   * The decorative rule turns ink while the row or its delete button shows keyboard focus (maw §1 rule 2), next to
+   * the focus ring. `:focus-visible` rather than `:focus-within`: a mouse click on the text focuses the article
+   * (`tabindex="-1"`) and must not leave an ink rule behind.
+   */
   .comments-section__entry {
     @apply border-be border-rule;
+
+    container-type: inline-size;
+
+    &:has(:focus-visible) {
+      @apply border-rule-strong;
+    }
+
+    @variant motion-safe {
+      transition: border-color var(--duration-fast) var(--ease-standard);
+    }
   }
 
   .comments-section__more {
-    @apply flex items-center pbs-2;
+    @apply flex flex-col items-start pbs-1;
   }
 }

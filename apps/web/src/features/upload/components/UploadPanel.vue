@@ -2,6 +2,7 @@
 import type { ImageDto } from '@app/shared';
 import { nextTick, shallowRef, useId, useTemplateRef } from 'vue';
 
+import { usePublishedBlockSize } from '../../../shared/dom/use-published-block-size';
 import UploadForm from './UploadForm.vue';
 
 /**
@@ -14,13 +15,17 @@ import UploadForm from './UploadForm.vue';
  * values (`v-show`), and an upload that is already running finishes.
  *
  * The root is `display: contents` (UploadPanel.css), so the bar sticks within HomePage's container, which spans the
- * whole gallery. Emits `uploaded(image)` after a `201`; HomePage prepends it to the gallery.
+ * whole gallery. The bar's measured height is published as `--upload-bar-block-size` while the panel is mounted, so
+ * the root scroll padding keeps focused elements clear of it on this page only (base.css). Emits `uploaded(image)`
+ * after a `201`; HomePage prepends it to the gallery.
  */
 const emit = defineEmits<{ uploaded: [image: ImageDto] }>();
 
 const expanded = shallowRef(false);
 const bodyId = useId();
 const form = useTemplateRef<InstanceType<typeof UploadForm>>('form');
+const bar = useTemplateRef<HTMLElement>('bar');
+usePublishedBlockSize(bar, '--upload-bar-block-size');
 
 /** Expands the form and focuses its first field (also called by the gallery's empty state through HomePage). */
 function open(): void {
@@ -40,7 +45,7 @@ defineExpose({ open });
 
 <template>
   <div class="upload-panel">
-    <div class="upload-panel__bar">
+    <div ref="bar" class="upload-panel__bar">
       <h2 class="upload-panel__heading">
         <button
           type="button"
@@ -49,7 +54,7 @@ defineExpose({ open });
           :aria-controls="bodyId"
           @click="toggle"
         >
-          Upload an image
+          <span class="upload-panel__label">Upload an image</span>
         </button>
       </h2>
     </div>

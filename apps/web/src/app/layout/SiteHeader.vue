@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, useTemplateRef } from 'vue';
+import { useTemplateRef } from 'vue';
 
+import { usePublishedBlockSize } from '../../shared/dom/use-published-block-size';
 import { ROUTE_NAMES } from '../../shared/routing/routes';
 
 /**
@@ -8,34 +9,10 @@ import { ROUTE_NAMES } from '../../shared/routing/routes';
  * legacy tagline "form/vue". Sticky from `sm` up (SiteHeader.css).
  *
  * The upload bar sticks directly below it (ADR 0012). The header's height depends on the font and the breakpoint,
- * so it is measured and published as `--site-header-block-size` on the root element (a custom property set from
- * JS, the one allowed inline style).
+ * so it is measured and published as `--site-header-block-size` on the root element.
  */
-const HEADER_SIZE_PROPERTY = '--site-header-block-size';
-
 const header = useTemplateRef<HTMLElement>('header');
-let observer: ResizeObserver | undefined;
-
-function publish(blockSize: number): void {
-  document.documentElement.style.setProperty(HEADER_SIZE_PROPERTY, `${String(Math.ceil(blockSize))}px`);
-}
-
-onMounted(() => {
-  const element = header.value;
-  if (element === null) return;
-  publish(element.getBoundingClientRect().height);
-  if (typeof ResizeObserver === 'undefined') return;
-  observer = new ResizeObserver((entries) => {
-    const size = entries[0]?.borderBoxSize[0]?.blockSize;
-    publish(size ?? element.getBoundingClientRect().height);
-  });
-  observer.observe(element);
-});
-
-onBeforeUnmount(() => {
-  observer?.disconnect();
-  document.documentElement.style.removeProperty(HEADER_SIZE_PROPERTY);
-});
+usePublishedBlockSize(header, '--site-header-block-size');
 </script>
 
 <template>

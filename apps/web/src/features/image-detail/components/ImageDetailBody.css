@@ -1,29 +1,42 @@
 @reference "#styles/main.css";
 
 /*
- * Structure only (BUILD-ORDER 3.2); visual polish is phase 4. Image first on paper with a surface placeholder while it
- * loads, then the text column: description as running text, a tracked meta line, then the owner's actions.
+ * The loaded image (F-11): the picture on a flat surface mat, then the text column. Rhythm is tight inside the text
+ * (description, meta, owner action) and wider between the picture and the text (maw §3 "vary rhythm").
  */
 @layer components {
   .image-detail-body {
-    @apply flex flex-col gap-6;
+    @apply flex flex-col gap-5;
   }
 
+  /*
+   * The mat is the placeholder while the image loads, and afterwards fills the letterbox of a portrait or very wide
+   * image. It also gives a white picture an edge on paper (and a black one in dark mode) without a border or shadow.
+   */
   .image-detail-body__frame {
-    @apply flex justify-center bg-surface;
+    @apply bg-surface;
   }
 
+  /*
+   * Full width, height from the width/height attributes, so the space is reserved before the bytes arrive (F-09).
+   * The height is capped so a tall picture never pushes its own bottom edge below the fold; `contain` then centres
+   * it on the mat at its real proportions (never cropped, never stretched). --media-max-block-size (tokens.css) is
+   * the prose measure or 70% of the dynamic viewport height, whichever is smaller, so a portrait image also fits
+   * under the dialog header on a short landscape screen (1280x720).
+   */
   .image-detail-body__image {
     @apply block inline-full;
 
-    block-size: auto; /* keeps the aspect ratio from the width/height attributes */
+    block-size: auto;
+    max-block-size: var(--media-max-block-size);
     object-fit: contain;
   }
 
   .image-detail-body__text {
-    @apply flex flex-col items-start gap-4;
+    @apply flex flex-col items-start gap-3;
   }
 
+  /* User text: line breaks kept (never v-html), long words and URLs wrap instead of widening the dialog (F-10). */
   .image-detail-body__description {
     @apply m-0 text-body text-ink max-inline-prose;
 
@@ -31,13 +44,15 @@
     white-space: pre-line;
   }
 
+  /* maw meta line: small, tracked, secondary (muted ink is 6.29:1 light, 7.46:1 dark, F-52). */
   .image-detail-body__meta {
-    @apply m-0 text-meta text-ink-muted;
+    @apply m-0 text-meta text-ink-muted max-inline-prose;
 
     overflow-wrap: anywhere;
   }
 
+  /* Stretched so an error under "delete image" can use the whole column instead of the button's width. */
   .image-detail-body__actions {
-    @apply pbs-2;
+    @apply self-stretch pbs-3;
   }
 }

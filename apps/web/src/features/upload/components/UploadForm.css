@@ -1,6 +1,9 @@
 @reference "#styles/main.css";
 
-/* Structure of the upload form (BUILD-ORDER 3.4; visual polish in phase 4): one column of fields at prose width. */
+/*
+ * Upload form (F-17, F-24): one left-aligned column of fields at prose width. Rhythm is deliberately uneven (maw §3):
+ * tight inside a field (TextField, FilePicker), wider between fields, widest before the submit.
+ */
 @layer components {
   .upload-form {
     @apply flex flex-col gap-8 max-inline-prose;
@@ -8,6 +11,6 @@
 
   /* The single accent button of the view (ADR 0012); it keeps its own width instead of stretching. */
   .upload-form__submit {
-    @apply self-start;
+    @apply self-start mbs-4;
   }
 }

@@ -20,8 +20,9 @@
     @apply m-0;
   }
 
+  /* pbs-1/pbe-1 lift the 14px links above the 24px target size (WCAG 2.5.8) without changing the footer's look. */
   .site-footer__link {
-    @apply inline-block text-ink no-underline;
+    @apply inline-block pbs-1 pbe-1 text-ink no-underline;
 
     /* @variant hover = :hover inside @media (hover: hover), so nothing sticks after a tap. */
     @variant hover {

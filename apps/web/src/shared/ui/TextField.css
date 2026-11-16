@@ -10,8 +10,12 @@
     @apply flex items-baseline justify-between gap-4;
   }
 
+  /*
+   * Lowercase like every maw label (maw §10); only through CSS, so the markup and the accessible name keep the
+   * sentence-case copy (F-38 "Name (shown publicly)", B-74, as the comments heading and the upload toggle).
+   */
   .text-field__label {
-    @apply text-meta text-ink-muted;
+    @apply text-meta text-ink-muted lowercase;
   }
 
   .text-field__marker {
@@ -25,13 +29,17 @@
     border-block-end: var(--rule-width) solid var(--color-ink-muted);
     border-radius: 0;
 
+    &[aria-invalid='true'] {
+      border-block-end: var(--rule-width-strong) solid var(--color-error);
+    }
+
+    /*
+     * After the invalid state on purpose: the focus indicator is always ink (maw §4, F-51). While an invalid field
+     * has focus, the error message with its rust rule below still marks it.
+     */
     &:focus-visible {
       outline: none;
       border-block-end: var(--rule-width-strong) solid var(--color-ink);
-    }
-
-    &[aria-invalid='true'] {
-      border-block-end: var(--rule-width-strong) solid var(--color-error);
     }
   }
 

@@ -14,16 +14,23 @@
     @apply m-0 text-body text-ink-muted max-inline-prose;
   }
 
+  /* maw text button A as a link (the `link-underlined` look AppButton uses); pbs-1/pbe-1 = a 24px target. */
   .not-found-page__link {
-    @apply text-body text-ink underline;
-
-    @variant hover {
-      text-decoration-thickness: var(--rule-width-strong);
-    }
+    @apply inline-block pbs-1 pbe-1 text-body text-ink link-underlined;
   }
 
-  /* inline-block keeps the link's underline off the arrow glyph. */
+  /*
+   * As in the image dialog's "back to the gallery": inline-block keeps the link's underline off the arrow (the gap is
+   * a margin, not a space in the markup, so no underlined space either) and lets it shake on hover, on pointer
+   * devices only and never under reduced motion (maw §7, F-60).
+   */
   .not-found-page__arrow {
     @apply inline-block me-2;
+
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+      .not-found-page__link:hover & {
+        @apply animate-shake;
+      }
+    }
   }
 }

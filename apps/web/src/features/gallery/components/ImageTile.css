@@ -1,12 +1,25 @@
 @reference "#styles/main.css";
 
 /*
- * ImageTile: no card box. The preview in a 16/10 frame on the surface colour, then the caption like a stacked maw
- * list row: title, meta (author, date), and a 1px rule that turns ink on hover and focus (ADR 0012).
+ * ImageTile: no card box (maw §6 image grid). The preview in a 16/10 frame on the surface colour, then the caption
+ * like a stacked maw list row: title, meta (author, date), and a 1px rule that turns ink on hover, focus and press
+ * (ADR 0012).
+ *
+ * The tile fills its grid cell and the caption takes the remaining height, so the rules of one grid row line up
+ * even when a title wraps to more lines than its neighbours (editorial rhythm, no ragged baseline of rules).
  */
 @layer components {
+  /*
+   * A tile fades in when it enters (first page, "load more", a new upload; maw §7 "rows/images entering"). The
+   * animation is on the tile, not the image: a CSS animation starts when the element is rendered, not when a lazy
+   * image's bytes arrive, so it would have run on an empty frame. The surface frame holds the space until then.
+   */
   .image-tile {
-    @apply flex flex-col text-ink no-underline;
+    @apply flex flex-col block-full text-ink no-underline;
+
+    @variant motion-safe {
+      @apply animate-fade-in;
+    }
   }
 
   .image-tile__frame {
@@ -18,10 +31,10 @@
   }
 
   .image-tile__caption {
-    @apply flex flex-col gap-1 pbs-3 pbe-3 border-be border-rule;
+    @apply flex flex-1 flex-col gap-1 pbs-3 pbe-3 border-be border-rule;
 
-    .image-tile:hover &,
-    .image-tile:focus-visible & {
+    .image-tile:focus-visible &,
+    .image-tile:active & {
       @apply border-rule-strong;
     }
 
@@ -34,12 +47,6 @@
     @apply text-title-s font-regular;
 
     overflow-wrap: anywhere;
-
-    @variant motion-safe {
-      .image-tile:hover & {
-        @apply animate-shake;
-      }
-    }
   }
 
   .image-tile__meta {
@@ -52,5 +59,18 @@
 
   .image-tile__date {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Hover only on devices that can hover, so a tapped tile keeps no ink rule or shake after the dialog closes. */
+  @media (hover: hover) {
+    .image-tile:hover .image-tile__caption {
+      @apply border-rule-strong;
+    }
+
+    .image-tile:hover .image-tile__title {
+      @variant motion-safe {
+        @apply animate-shake;
+      }
+    }
   }
 }

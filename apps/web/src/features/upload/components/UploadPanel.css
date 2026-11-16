@@ -1,6 +1,11 @@
 @reference "#styles/main.css";
 
-/* Sticky one-row bar plus the form in normal flow below it (ADR 0012, F-57); visual polish in phase 4 (BUILD-ORDER 4.2). */
+/*
+ * Upload panel (ADR 0012, F-57): a sticky one-row bar plus the form in normal flow below it. The bar reads like a
+ * maw list row: the disclosure button fills the row, its label on the left and a single arrow glyph on the right
+ * (the meta column). Its 1px rule turns ink on hover and while the form is open, so the state is shown by ink and
+ * by the arrow, never by colour alone (maw §4).
+ */
 @layer components {
   /* No box of its own: the bar and the body become children of HomePage's container (ADR 0012). */
   .upload-panel {
@@ -9,7 +14,9 @@
 
   /*
    * The only sticky element besides the header: one row. On >= sm the header is sticky too, so the bar sits below
-   * it; SiteHeader publishes its measured height as --site-header-block-size.
+   * it; SiteHeader publishes its measured height as --site-header-block-size. Solid paper, so gallery photos never
+   * show through behind the ink label (F-52). UploadPanel.vue publishes the bar's own height as
+   * --upload-bar-block-size for the root scroll padding (base.css).
    */
   .upload-panel__bar {
     @apply sticky flex items-center pbs-3 pbe-3 bg-paper border-be border-rule;
@@ -17,24 +24,89 @@
     inset-block-start: 0;
     z-index: var(--layer-header);
 
+    @variant hover {
+      @apply border-rule-strong;
+    }
+
+    &:has([aria-expanded='true']) {
+      @apply border-rule-strong;
+    }
+
+    @variant motion-safe {
+      transition: border-color var(--duration-fast) var(--ease-standard);
+    }
+
     @variant sm {
       inset-block-start: var(--site-header-block-size, 0);
     }
   }
 
-  .upload-panel__heading {
-    @apply m-0 text-lead font-medium;
+  /*
+   * The same fade edge that SiteHeader puts under the header (styles/utilities.css), so gallery content fades out
+   * under the pinned bar instead of being cut off hard at its rule (4.3 review). `100%` is the padding edge, so the
+   * edge starts one rule width lower to keep the bar's 1px rule visible.
+   */
+  .upload-panel__bar::after {
+    @apply fade-edge;
+
+    inset-block-start: calc(100% + var(--rule-width));
   }
 
+  .upload-panel__heading {
+    @apply flex-1 m-0 text-lead font-medium;
+  }
+
+  /*
+   * The whole row is the target (WCAG 2.5.8), so the arrow on the right opens the form too. Lowercase like every maw
+   * button and the gallery's empty-state "upload an image" (maw §10, 4.3 review); only through CSS, so the markup
+   * keeps sentence case for screen readers (B-74, as the comments heading).
+   */
   .upload-panel__toggle {
-    @apply p-0 text-lead font-medium text-ink font-sans cursor-pointer;
+    @apply flex items-baseline justify-between gap-4 inline-full p-0 text-lead font-medium text-ink font-sans lowercase cursor-pointer;
 
     background: none;
     border: 0;
+    border-radius: 0;
     text-align: start;
   }
 
+  /*
+   * Only the label shakes, like a list-row title (the button is the whole row, the arrow is its meta column);
+   * pointer devices only, never under reduced motion (maw §7, F-60).
+   */
+  .upload-panel__label {
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+      .upload-panel__toggle:hover & {
+        @apply animate-shake;
+      }
+    }
+  }
+
+  /*
+   * The one glyph maw allows (an arrow): down while closed, up while open. Decorative: the empty alternative text
+   * keeps it out of the accessible name, which aria-expanded already carries. Browsers without alternative text for
+   * `content` (Safari before 17.4) drop that declaration and keep the plain one before it, so the arrow never
+   * disappears.
+   */
+  .upload-panel__toggle::after {
+    @apply text-lead font-regular;
+
+    content: '\2193';
+    content: '\2193' / '';
+  }
+
+  .upload-panel__toggle[aria-expanded='true']::after {
+    content: '\2191';
+    content: '\2191' / '';
+  }
+
+  /* Generous space around the form, tight inside it (maw §3 rhythm); closed by the same 1px rule as a row. */
   .upload-panel__body {
-    @apply pbs-6 pbe-10 border-be border-rule;
+    @apply pbs-8 pbe-12 border-be border-rule;
+
+    /* v-show switches `display`, which restarts the animation each time the form opens. */
+    @variant motion-safe {
+      @apply animate-fade-in;
+    }
   }
 }

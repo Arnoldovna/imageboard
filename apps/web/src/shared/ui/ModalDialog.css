@@ -1,31 +1,56 @@
 @reference "#styles/main.css";
 
-/* maw modal: 1px ink border, no radius, no shadow, flat paper backdrop at 92% (never dark glass or blur). */
+/*
+ * maw modal: 1px ink border, no radius, no shadow, flat paper backdrop at 92% (never dark glass or blur).
+ *
+ * The dialog is its own scroll container (so the keys scroll it while "close" has focus); the header stays pinned so
+ * "close" is always in reach on long content.
+ */
 @layer components {
   .modal-dialog {
-    @apply m-auto p-0 bg-paper text-ink inline-full max-inline-wide;
+    @apply m-auto p-0 bg-paper text-ink inline-full;
 
-    max-block-size: calc(100% - --spacing(6)); /* % of the viewport: a modal dialog is fixed */
+    /*
+     * % of the viewport (a modal dialog is fixed): the page gutter (12px, 20px from sm) stays visible on every side.
+     * The measure caps the width from sm up (wide), or on every width for the narrow variant (prose).
+     */
+    --modal-dialog-gutter: --spacing(6);
+
+    max-inline-size: min(var(--modal-dialog-measure, 100%), calc(100% - var(--modal-dialog-gutter)));
+    max-block-size: calc(100% - var(--modal-dialog-gutter));
     border: var(--rule-width) solid var(--color-ink);
     border-radius: 0;
     overscroll-behavior: contain;
+
+    /*
+     * Keyboard focus never ends up under the pinned header (WCAG 2.4.11): ModalDialog.vue publishes the header's
+     * measured height (it grows with a long title); the focus ring (outline + offset) stays visible at both edges.
+     */
+    --modal-dialog-focus-room: calc(var(--focus-width) + var(--focus-offset));
+
+    scroll-padding-block: calc(var(--modal-dialog-header-block-size, --spacing(0)) + var(--modal-dialog-focus-room))
+      var(--modal-dialog-focus-room);
 
     &::backdrop {
       background-color: --alpha(var(--color-paper) / 92%);
     }
 
     @variant sm {
-      max-inline-size: min(var(--container-wide), calc(100% - --spacing(10)));
-      max-block-size: calc(100% - --spacing(10));
+      --modal-dialog-gutter: --spacing(10);
+      --modal-dialog-measure: var(--container-wide);
     }
   }
 
+  /* After the sm rule on purpose: same specificity, so the prose measure wins on every width. */
   .modal-dialog--narrow {
-    @apply max-inline-prose;
+    --modal-dialog-measure: var(--container-prose);
   }
 
   .modal-dialog__header {
-    @apply flex items-baseline justify-between gap-6 p-5 border-be border-rule;
+    @apply sticky flex items-baseline justify-between gap-6 p-5 bg-paper border-be border-rule;
+
+    inset-block-start: 0;
+    z-index: var(--layer-header);
   }
 
   .modal-dialog__title {

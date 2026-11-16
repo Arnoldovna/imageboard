@@ -1,11 +1,30 @@
 /*
  * Element defaults only, no classes. Tokens only.
- * Font files are imported in the JS entry (src/main.ts, maw-design-system §2).
+ * Font files are imported in the JS entry (src/main.ts, maw-design-system §2); the family comes from --font-sans,
+ * set once on the root and inherited (B-77: no universal font rule).
  */
 @layer base {
   :root {
     /* The scrollbar keeps its space when a dialog locks scrolling below, so nothing jumps sideways (ADR 0011). */
     scrollbar-gutter: stable;
+
+    /*
+     * Pinned rows must never cover what keyboard focus or an in-page link scrolls to (WCAG 2.4.11, F-51, F-57).
+     * Their measured heights are published on the root while they are mounted: --upload-bar-block-size by
+     * UploadPanel.vue (home page only, sticky on every width) and --site-header-block-size by SiteHeader.vue
+     * (pinned from sm up). A page without the bar gets 0 for it. On top come the fade edge under the pinned row and
+     * the focus ring (outline + offset) of the element scrolled to.
+     */
+    --pinned-rows-clearance: calc(
+      var(--upload-bar-block-size, --spacing(0)) + var(--header-fade-block-size) + var(--focus-width) +
+        var(--focus-offset)
+    );
+
+    scroll-padding-block-start: var(--pinned-rows-clearance);
+
+    @variant sm {
+      scroll-padding-block-start: calc(var(--site-header-block-size, --spacing(0)) + var(--pinned-rows-clearance));
+    }
   }
 
   /*
@@ -47,11 +66,19 @@
     text-underline-offset: var(--underline-offset);
   }
 
+  /* With the width/height attributes this keeps each image's aspect ratio while it loads (F-09, CLS < 0.1). */
   img,
   video {
     @apply block max-inline-full;
 
     block-size: auto;
+  }
+
+  /* Placeholders are never labels (maw §6); if one is used it must still meet 4.5:1, which muted ink does (F-52). */
+  ::placeholder {
+    @apply text-ink-muted;
+
+    opacity: 1;
   }
 
   /* Focus is never removed (F-51, B-71): 2px ink outline, 4px offset, visible on paper and on every accent. */

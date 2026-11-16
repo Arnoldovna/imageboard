@@ -1,44 +1,53 @@
 @reference "#styles/main.css";
 
 /*
- * Structure only (BUILD-ORDER 3.2); visual polish is phase 4. The dialog frame, heading and "close" come from the
- * shared ModalDialog; this file lays out the states inside its body.
+ * The dialog frame, heading and "close" come from the shared ModalDialog; this file lays out the states inside its
+ * body: loading, not found, and the loaded image with its comments.
  */
 @layer components {
   .image-detail-dialog__loading {
-    @apply flex flex-col gap-4;
+    @apply flex flex-col;
   }
 
-  /* A flat surface block where the image will be (no shimmer, maw §8). */
+  /* A flat surface block where the image will be (maw feedback pattern; no shimmer, maw §8). */
   .image-detail-dialog__placeholder {
     @apply inline-full bg-surface aspect-media;
   }
 
+  /* Not found (F-13, B-49): the dialog heading says what happened, one sentence says what to do next. */
   .image-detail-dialog__missing {
-    @apply flex flex-col items-start gap-4;
+    @apply flex flex-col items-start gap-5;
   }
 
   .image-detail-dialog__note {
-    @apply m-0 text-body text-ink max-inline-prose;
+    @apply m-0 text-lead text-ink max-inline-prose;
   }
 
+  /* maw text button A as a link (the `link-underlined` look AppButton uses); min-block-6 = a 24px target. */
   .image-detail-dialog__back {
-    @apply text-body text-ink underline;
+    @apply inline-block min-block-6 text-body text-ink link-underlined;
+  }
 
-    text-decoration-thickness: var(--rule-width);
-    text-underline-offset: var(--underline-offset);
+  /*
+   * inline-block keeps the underline off the arrow and lets it move. The portfolio's back arrow shakes on hover:
+   * pointer devices only, never under reduced motion (maw §7, F-60).
+   */
+  .image-detail-dialog__arrow {
+    @apply inline-block me-2;
 
-    @variant hover {
-      text-decoration-thickness: var(--rule-width-strong);
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+      .image-detail-dialog__back:hover & {
+        @apply animate-shake;
+      }
     }
   }
 
-  /* inline-block keeps the link's underline off the arrow glyph. */
-  .image-detail-dialog__arrow {
-    @apply inline-block me-2;
-  }
-
+  /* Image block and comments are two sections: a generous step between them, tight rhythm inside each. */
   .image-detail-dialog__content {
     @apply flex flex-col gap-12;
+
+    @variant motion-safe {
+      @apply animate-fade-in;
+    }
   }
 }

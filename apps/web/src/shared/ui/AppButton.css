@@ -1,41 +1,34 @@
 @reference "#styles/main.css";
 
-/* maw button: A = text with a 1px underline (2px on hover), B = outlined rectangle that inverts on hover. */
+/*
+ * maw button: A = text with a 1px underline (2px on hover), B = outlined rectangle that inverts on hover. The looks
+ * themselves are the `link-underlined` and `button-outlined` utilities (styles/utilities.css), shared with the text
+ * links and the FilePicker button. Hover only on devices that can hover, so an inverted button never sticks after a
+ * tap.
+ */
 @layer components {
+  /* min-block-6: a text button is at least 24px tall (WCAG 2.5.8 target size) without looking like a box. */
   .app-button {
-    @apply inline-flex items-center gap-2 p-0 text-body text-ink font-sans font-regular underline cursor-pointer;
+    @apply inline-flex items-center gap-2 p-0 min-block-6 text-body text-ink font-sans font-regular link-underlined cursor-pointer;
 
     background: none;
     border: 0;
     border-radius: 0;
-    text-decoration-thickness: var(--rule-width);
-    text-underline-offset: var(--underline-offset);
 
-    &:hover:not(:disabled, [aria-disabled='true']) {
-      text-decoration-thickness: var(--rule-width-strong);
-    }
-
-    /* `aria-disabled` is the `busy` state: the button keeps focus while its action runs (AppButton.vue). */
+    /*
+     * `aria-disabled` is the `busy` state: the button keeps focus while its action runs (AppButton.vue). No hover
+     * feedback for an action that cannot run: the underline stays 1px (this rule comes after the utility's hover).
+     */
     &:disabled,
     &[aria-disabled='true'] {
       @apply text-ink-muted cursor-not-allowed;
-    }
 
-    @variant motion-safe {
-      transition-property: color, background-color, text-decoration-thickness;
-      transition-duration: var(--duration-fast);
-      transition-timing-function: var(--ease-standard);
+      text-decoration-thickness: var(--rule-width);
     }
   }
 
   .app-button--outlined {
-    @apply pbs-3 pbe-3 ps-6 pe-6 no-underline;
-
-    border: var(--rule-width) solid var(--color-ink);
-
-    &:hover:not(:disabled, [aria-disabled='true']) {
-      @apply bg-ink text-paper;
-    }
+    @apply button-outlined;
 
     &:disabled,
     &[aria-disabled='true'] {
@@ -45,17 +38,23 @@
 
   /* Accent field: text and border switch to on-accent, never muted text on the accent (maw §4). */
   .app-button--accent {
-    @apply pbs-3 pbe-3 ps-6 pe-6 no-underline bg-accent text-on-accent;
+    @apply button-outlined bg-accent text-on-accent;
 
-    border: var(--rule-width) solid var(--color-on-accent);
-
-    &:hover:not(:disabled, [aria-disabled='true']) {
-      @apply bg-ink text-paper;
-    }
+    border-color: var(--color-on-accent);
 
     &:disabled,
     &[aria-disabled='true'] {
       @apply text-on-accent;
+    }
+  }
+
+  /* Both B variants invert on hover, unless the action cannot run. */
+  .app-button--outlined,
+  .app-button--accent {
+    @variant hover {
+      &:not(:disabled, [aria-disabled='true']) {
+        @apply bg-ink text-paper;
+      }
     }
   }
 }

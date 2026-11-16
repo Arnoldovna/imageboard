@@ -3,19 +3,28 @@
 /*
  * GallerySkeleton: static surface blocks in the gallery grid (no shimmer, maw §8). The grid repeats
  * `.gallery-section__grid`; its container is the `.gallery-section` block around this component.
+ *
+ * The "Loading images…" line shares the first grid cell and sits inside the first surface frame, so the skeleton
+ * starts exactly where the first real tile will, and nothing jumps when the tiles replace it (F-09). Muted ink on
+ * the surface colour stays above 4.5:1 in both schemes (5.6:1 light, 6.2:1 dark).
  */
 @layer components {
   .gallery-skeleton {
-    @apply flex flex-col gap-6;
+    display: grid;
   }
 
+  /* `order` makes the label paint after the grid in the shared cell (grid items paint in order-modified order). */
   .gallery-skeleton__label {
-    @apply m-0 text-meta text-ink-muted;
+    @apply m-0 ps-3 pe-3 pbs-3 text-meta text-ink-muted;
+
+    grid-area: 1 / 1;
+    order: 1;
   }
 
   .gallery-skeleton__grid {
     @apply m-0 p-0 grid grid-cols-1 gap-x-5 gap-y-10;
 
+    grid-area: 1 / 1;
     list-style: none;
 
     @variant @row {
@@ -43,18 +52,27 @@
     @apply flex flex-col gap-1 pbs-3 pbe-3 border-be border-rule;
   }
 
-  /* One line box of the tile's title and meta type, so the caption is as tall as the real one. */
-  .gallery-skeleton__title {
-    @apply block text-title-s bg-surface;
+  /*
+   * One line box of the tile's title and meta type, so the caption is as tall as the real one. Only the content box
+   * is painted (inset by the padding), so the bars read as lines of text rather than as solid slabs.
+   */
+  .gallery-skeleton__title,
+  .gallery-skeleton__meta {
+    @apply block py-1 bg-surface;
 
     block-size: 1lh;
+    background-clip: content-box;
+  }
+
+  .gallery-skeleton__title {
+    @apply text-title-s;
+
     inline-size: 75%;
   }
 
   .gallery-skeleton__meta {
-    @apply block text-meta bg-surface;
+    @apply text-meta;
 
-    block-size: 1lh;
     inline-size: 40%;
   }
 }
