@@ -20,12 +20,11 @@ request becomes a 500).
 
 - `GET /api/session` creates an anonymous identity when `req.session.ownerId` is absent:
   `req.session.ownerId = crypto.randomUUID()` (UUID v4). Images and comments store it in `owner_id uuid NOT NULL`.
-- **Identity creation is rate-limited**: limiter `identities` (`RATE_LIMIT_IDENTITIES` = 20 per hour per IP, ADR
-  0013) runs inside the session handler **only when a new `ownerId` is about to be created**; existing sessions are
+- **Identity creation is rate-limited**: limiter `identities` (`RATE_LIMIT_IDENTITIES` = 20 per hour per IP, ADR 0013) runs inside the session handler **only when a new `ownerId` is about to be created**; existing sessions are
   never counted. On 429 the SPA still renders and browses (GETs need no session); mutations show the rate-limit
   message.
 - **Provisional sessions are short-lived**: a new identity gets `req.session.cookie.maxAge =
-  SESSION_PROVISIONAL_HOURS` (default 24 h). After the first successful upload or comment the controller calls
+SESSION_PROVISIONAL_HOURS` (default 24 h). After the first successful upload or comment the controller calls
   `markSessionActive(req)` (`shared/session/actor.ts`), which sets `req.session.active = true` and
   `cookie.maxAge = SESSION_MAX_AGE_DAYS` (default 180 days). `rolling: true` renews whichever lifetime the session has
   on every response; connect-redis derives the key TTL from `cookie.maxAge`. Crawlers and one-off visitors therefore
@@ -43,12 +42,12 @@ request becomes a 500).
 
 ### Production Redis
 
-| Instance | Holds | Settings |
-|---|---|---|
-| `REDIS_URL` (sessions) | ownership-relevant session keys | AOF (`appendonly yes`, `appendfsync everysec`), `maxmemory` sized with headroom, `maxmemory-policy noeviction` (never silently evict an owner) |
-| `RATE_LIMIT_REDIS_URL` (optional, defaults to `REDIS_URL`) | limiter counters only | no persistence, `maxmemory-policy volatile-ttl` (all keys have TTLs; evicting a counter only resets a budget) |
+| Instance                                                   | Holds                           | Settings                                                                                                                                       |
+| ---------------------------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REDIS_URL` (sessions)                                     | ownership-relevant session keys | AOF (`appendonly yes`, `appendfsync everysec`), `maxmemory` sized with headroom, `maxmemory-policy noeviction` (never silently evict an owner) |
+| `RATE_LIMIT_REDIS_URL` (optional, defaults to `REDIS_URL`) | limiter counters only           | no persistence, `maxmemory-policy volatile-ttl` (all keys have TTLs; evicting a counter only resets a budget)                                  |
 
-Separate *instances* rather than separate logical databases, because `maxmemory` and the eviction policy are per
+Separate _instances_ rather than separate logical databases, because `maxmemory` and the eviction policy are per
 instance. Local compose keeps one Redis without persistence (restarting it resets ownership, acceptable in
 development). Memory alerts on the sessions instance are part of the deployment checklist (ADR 0019).
 

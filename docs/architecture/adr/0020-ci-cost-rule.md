@@ -34,6 +34,7 @@ Marina decided this cost rule:
    `repository` is a required top-level property of both the `workflow_run` and the `workflow_dispatch` webhook
    payloads (octokit webhook schemas, checked 16 Nov 2026), so the expression never evaluates against a missing
    object.
+
 3. **`deploy` is gated by both rules**: `needs: images` and
    `if: github.event.repository.private == false && vars.DEPLOY_ENABLED == 'true'` plus the `production`
    environment.

@@ -1,0 +1,22 @@
+/*
+ * Entry stylesheet. Order matters.
+ *
+ * source(none): Tailwind does NOT scan templates. No utility class can ever be
+ * generated from markup — utilities exist only where a CSS file uses @apply.
+ * This is the second line of defence after scripts/check-no-utilities.mjs.
+ */
+@import 'tailwindcss' source(none);
+@import './tokens.css';
+@import './base.css';
+@import './utilities.css';
+
+/*
+ * Handlebars / server-rendered projects ONLY: list every component file here.
+ * These files must NOT contain `@reference` (they are part of this compilation;
+ * a @reference back to main.css recurses — verified with Tailwind 4.3).
+ * Globs are not supported; one @import per file, alphabetical.
+ *
+ * @import "./components/button.css";
+ * @import "./components/list-row.css";
+ * @import "./components/site-header.css";
+ */

@@ -13,8 +13,8 @@ id) and explains why it is equivalent to a synchronizer token here.
 ## Decision
 
 1. **csrf-csrf 4.1.0** `doubleCsrf({ getSecret: () => CSRF_SECRET, getSessionIdentifier: req => req.session.id,
-   cookieName: '__Host-imageboard.x-csrf-token' (secure) | 'imageboard.x-csrf-token', cookieOptions: { sameSite:
-   'lax', path: '/', secure, httpOnly: true }, getCsrfTokenFromRequest: req => req.headers['x-csrf-token'] })`.
+cookieName: '__Host-imageboard.x-csrf-token' (secure) | 'imageboard.x-csrf-token', cookieOptions: { sameSite:
+'lax', path: '/', secure, httpOnly: true }, getCsrfTokenFromRequest: req => req.headers['x-csrf-token'] })`.
    Ignored methods GET/HEAD/OPTIONS. `cookie-parser` runs after express-session.
 2. Token delivery: `GET /api/session` returns `{ csrfToken }`. Because that call stores `ownerId`, the session id is
    stable and the token stays valid for the session's lifetime.

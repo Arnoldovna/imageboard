@@ -1,0 +1,23 @@
+@reference "#styles/main.css";
+
+@layer components {
+  .app-shell {
+    @apply mx-auto max-inline-page pbs-8 pbe-16 ps-3 pe-3;
+
+    @variant sm {
+      @apply pbs-12 ps-5 pe-5;
+    }
+  }
+
+  .app-shell__wordmark {
+    @apply m-0 text-title font-medium text-ink;
+
+    @variant sm {
+      @apply text-title-l;
+    }
+
+    @variant md {
+      @apply text-display;
+    }
+  }
+}

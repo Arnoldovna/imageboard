@@ -20,7 +20,7 @@ import boundaries, and the `project-scaffold` templates as the starting point.
   separate, verified change later. `.npmrc` sets `engine-strict=true` so a wrong Node version fails the install
   instead of warning.
 - Backend features `images`, `comments`, `upload`, plus `session`; layered `routes → controller → service →
-  repository`. Features never import each other; the composition root (`app.ts`) injects ports
+repository`. Features never import each other; the composition root (`app.ts`) injects ports
   (`ImageUploadPort`, `imageExists`, the multipart parser, limiters; exact types in ADR 0017). This is stricter than the skill default (index-only imports) because it keeps
   every backend module buildable in parallel and testable with fakes.
 - Frontend features `gallery`, `image-detail`, `comments`, `upload`, plus `app/` (shell, router, pages) and

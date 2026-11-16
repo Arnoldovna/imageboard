@@ -15,15 +15,15 @@ limit and `GET /api/health`. The scaffold template mounts health at `/health/{li
 **Rate limits** (express-rate-limit 8.7 + rate-limit-redis 6, per IP, `ipv6Subnet: 56`, `standardHeaders:
 'draft-8'`, handler → `429 rate-limited` problem; `Retry-After` set by the library):
 
-| Limiter | Window (code constant) | Limit (env) | Key | Applies to |
-|---|---|---|---|---|
-| `global` | 5 min | `RATE_LIMIT_GLOBAL` = 300 | IP | every `/api/*` request after the session middleware (not health, not media) |
-| `media` | 5 min | `RATE_LIMIT_MEDIA` = 1200 | IP | `/api/media/*` (a page load fetches 12 to 24 previews, so the global budget would be far too small) |
-| `identities` | 1 h | `RATE_LIMIT_IDENTITIES` = 20 | IP | `GET /api/session`, counted **only** when a new `ownerId` is created (ADR 0002) |
-| `uploads` | 1 h | `RATE_LIMIT_UPLOADS` = 10 | IP | `POST /api/images` |
-| `uploads-global-day` | 24 h | `RATE_LIMIT_UPLOADS_GLOBAL_DAY` = 200 | constant key `all` | `POST /api/images` from all clients together (storage-cost cap against distributed abuse, ADR 0019) |
-| `comments` | 10 min | `RATE_LIMIT_COMMENTS` = 20 | IP | `POST /api/images/:imageId/comments` |
-| `deletes` | 10 min | `RATE_LIMIT_DELETES` = 30 | IP | `DELETE /api/images/:id` and `DELETE /api/comments/:id` (one shared instance) |
+| Limiter              | Window (code constant) | Limit (env)                           | Key                | Applies to                                                                                          |
+| -------------------- | ---------------------- | ------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------- |
+| `global`             | 5 min                  | `RATE_LIMIT_GLOBAL` = 300             | IP                 | every `/api/*` request, before body parsing and the session middleware (not health, not media)      |
+| `media`              | 5 min                  | `RATE_LIMIT_MEDIA` = 1200             | IP                 | `/api/media/*` (a page load fetches 12 to 24 previews, so the global budget would be far too small) |
+| `identities`         | 1 h                    | `RATE_LIMIT_IDENTITIES` = 20          | IP                 | `GET /api/session`, counted **only** when a new `ownerId` is created (ADR 0002)                     |
+| `uploads`            | 1 h                    | `RATE_LIMIT_UPLOADS` = 10             | IP                 | `POST /api/images`                                                                                  |
+| `uploads-global-day` | 24 h                   | `RATE_LIMIT_UPLOADS_GLOBAL_DAY` = 200 | constant key `all` | `POST /api/images` from all clients together (storage-cost cap against distributed abuse, ADR 0019) |
+| `comments`           | 10 min                 | `RATE_LIMIT_COMMENTS` = 20            | IP                 | `POST /api/images/:imageId/comments`                                                                |
+| `deletes`            | 10 min                 | `RATE_LIMIT_DELETES` = 30             | IP                 | `DELETE /api/images/:id` and `DELETE /api/comments/:id` (one shared instance)                       |
 
 The `media` and `identities` limiters and the global daily upload cap are additions to FEATURES F-40; `/api/health`
 has no limiter because it is not reachable from outside (below). F-40 is annotated accordingly.
@@ -34,8 +34,12 @@ on `TRUST_PROXY` = the exact number of proxies in front of the API (1 behind ngi
 balancer + nginx).
 
 **Request limits**: `express.json({ limit: '16kb', strict: true })`; no urlencoded parser; `requireJson` (415) on
-JSON routes; multipart limits in ADR 0005 (`fieldSize` 16 KiB); Node `server.requestTimeout = 30_000`,
-`headersTimeout = 65_000`. nginx's `client_max_body_size` for `/api/` comes from the environment
+JSON routes; multipart limits in ADR 0005 (`fieldSize` 16 KiB); Node `requestTimeout = 30_000` and
+`headersTimeout = 20_000`, passed to `http.createServer()` (`config/app.ts` `HTTP_TIMEOUTS_MS`). `headersTimeout` must
+not exceed `requestTimeout`: Node's constructor rejects that, and a larger value assigned later never fires because the
+request timeout ends the request first (the template's `65_000` was inert). The global limiter runs **before**
+`express.json`, so a malformed or oversized JSON body, which ends the chain with `next(err)`, is still counted, and an
+over-budget client is rejected before its body is read. nginx's `client_max_body_size` for `/api/` comes from the environment
 (`API_MAX_BODY_SIZE`, default `6m`, rendered by the nginx image's `/etc/nginx/templates` envsubst step) and must stay
 slightly above `UPLOAD_MAX_BYTES` so the API, not nginx, produces the 413 problem. `env.ts` caps
 `UPLOAD_MAX_BYTES` at 20 MiB (memory buffers). If nginx still answers with its own HTML 413 or a 502/504, the web
@@ -43,7 +47,9 @@ client maps the non-problem body to `ApiError { code: 'unexpected-response', sta
 
 **Health**: `GET /api/health` = readiness (DB `select 1`, Redis `isReady`, S3 `HeadBucket`, 2 s timeout each; 503
 while shutting down), `GET /api/health/live` = liveness. Mounted before helmet/session/limits, not logged on
-success.
+success. The checks bound themselves to the same 2 s (`query_timeout` on the ping, an `AbortSignal` on `HeadBucket`;
+pg's `connectionTimeoutMillis` 5 s, S3 `connectionTimeout` 3 s), because the router's timeout only stops waiting: an
+unbounded check would leave one hanging call per cache window while a dependency hangs.
 
 - The readiness result is **cached for 3 s with a single in-flight check**: concurrent callers share one promise, so
   at most one `select 1`, one Redis check and one (billable on AWS) `HeadBucket` run per 3 s, whoever calls.
@@ -53,9 +59,14 @@ success.
   `docker compose up --wait` waits on it; Playwright needs no health URL (ADR 0015). A platform load balancer must
   probe the api container, not the public origin.
 
-**Shutdown** (template `server.ts`): SIGTERM/SIGINT → readiness 503 → `server.closeIdleConnections()` →
-`server.close()` (in-flight requests finish) → `container.dispose()` (pool end, Redis close, S3 destroy) → exit 0;
-10 s unref'd timer forces exit 1.
+**Shutdown** (`shared/http/graceful-shutdown.ts`, wired in `server.ts`): SIGTERM/SIGINT → readiness 503 → wait
+`SHUTDOWN_DELAY_MS` (default 0; behind a load balancer at least its probe interval × unhealthy threshold, so it stops
+routing while the API still accepts connections) → `server.close()` (closes idle keep-alive connections; in-flight
+requests finish) → `container.dispose()` (pool end, Redis close, S3 destroy) → exit 0. A 10 s unref'd timer after the
+delay forces exit 1. `unhandledRejection`, `uncaughtException` and a failed `listen` log `fatal`, skip (or cut short)
+the delay and run the same sequence, but exit **1**, so a supervisor sees a crash and restarts (ADR 0009). The pg
+pool and both Redis clients have `error` listeners (`createDatabase`, `connectRedis`): an `error` event without one
+would be thrown and end the process.
 
 ## Alternatives
 

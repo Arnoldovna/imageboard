@@ -1,0 +1,126 @@
+# Local infrastructure (default profile) and the full production-like stack (profile "app").
+#   pnpm infra:up / pnpm dev:setup  -> postgres, redis, minio (+ bucket) for `pnpm dev`
+#   pnpm stack:up / pnpm demo       -> everything incl. migrate, api and web (nginx) on http://127.0.0.1:8080
+# E2E never uses this project: scripts/run-e2e.mjs starts `imageboard-e2e` with docker-compose.e2e.yml on top.
+# Ports bind to 127.0.0.1 only. Secrets come from .env (pnpm setup:env). Every image is pinned by digest
+# (conventions §9); Dependabot's docker-compose ecosystem proposes updates. Keep apps/api/test/images.ts in sync.
+name: imageboard
+
+x-api-env: &api-env
+  NODE_ENV: production
+  LOG_LEVEL: info
+  TRUST_PROXY: '1' # behind the web (nginx) container
+  COOKIE_SECURE: 'false' # the local stack is plain http; production sets true (default)
+  DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  REDIS_URL: redis://redis:6379
+  SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env (pnpm setup:env)}
+  CSRF_SECRET: ${CSRF_SECRET:?set CSRF_SECRET in .env (pnpm setup:env)}
+  S3_ENDPOINT: http://minio:9000
+  S3_REGION: ${S3_REGION:-eu-central-1}
+  S3_BUCKET: ${S3_BUCKET}
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env (pnpm setup:env)}
+  S3_FORCE_PATH_STYLE: 'true'
+  UPLOAD_MAX_BYTES: ${UPLOAD_MAX_BYTES:-5242880}
+
+services:
+  postgres:
+    image: postgres:18-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports: ['127.0.0.1:5432:5432']
+    volumes: [postgres-data:/var/lib/postgresql]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    ports: ['127.0.0.1:6379:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # MinIO stopped publishing community images in Oct 2025; Chainguard ships a free, maintained build. Only `latest`
+  # is free, so the digest is the version.
+  minio:
+    image: cgr.dev/chainguard/minio:latest@sha256:18c8fa28697b25e0f34c6faae171079e88a03efb8e76a21d3b5d07b4e3cbef3e
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY}
+      MC_HOST_self: http://127.0.0.1:9000 # anonymous alias for the healthcheck below
+    ports: ['127.0.0.1:9000:9000', '127.0.0.1:9001:9001']
+    volumes: [minio-data:/data]
+    healthcheck:
+      # The image bundles mc; `mc ready` calls MinIO's unauthenticated readiness endpoint.
+      test: ['CMD', 'mc', 'ready', 'self']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot: creates the bucket once MinIO is healthy (MC_HOST_* defines the alias); idempotent.
+  # `up --wait` only accepts an exited one-shot that another started service depends on (api, profile app), so the
+  # infra-only path runs it with `docker compose run --rm minio-init` instead (pnpm infra:up, scripts/dev-setup.mjs).
+  minio-init:
+    image: cgr.dev/chainguard/minio-client:latest@sha256:0f1e32ca3b052f56859103282268dea4903bd78536ab407e3cf241a697013e80
+    command: ['mb', '--ignore-existing', 'local/${S3_BUCKET}']
+    environment:
+      MC_HOST_local: http://${S3_ACCESS_KEY_ID}:${S3_SECRET_ACCESS_KEY}@minio:9000
+    depends_on:
+      minio: { condition: service_healthy }
+
+  migrate:
+    profiles: [app]
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    command: ['dist/db/migrate.js']
+    environment: *api-env
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    profiles: [app]
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    environment: *api-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
+    healthcheck:
+      # Readiness, called on the api container itself: nginx denies /api/health from outside (ADR 0013).
+      # distroless: no shell or curl, so use the bundled node binary.
+      test:
+        - CMD
+        - /nodejs/bin/node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  web:
+    profiles: [app]
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    environment:
+      # nginx's body limit for /api must stay above UPLOAD_MAX_BYTES, so the API answers 413 itself (ADR 0013).
+      API_MAX_BODY_SIZE: ${API_MAX_BODY_SIZE:-6m}
+    ports: ['127.0.0.1:${WEB_PORT:-8080}:8080']
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
+  minio-data:

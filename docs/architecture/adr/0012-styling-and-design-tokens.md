@@ -13,7 +13,7 @@ Legacy CSS uses IDs, deep selector chains, duplicated buttons, hard-coded greys 
 ## Decision
 
 - `src/styles/tokens.css` = `maw-design-system/templates/tokens.css` verbatim, with `--color-accent:
-  var(--color-sky)` (#B8D3F3). It uses `--container-gallery-4: 72rem` ("gallery goes to 4 columns"; added to the
+var(--color-sky)` (#B8D3F3). It uses `--container-gallery-4: 72rem` ("gallery goes to 4 columns"; added to the
   maw template in the cross-project consistency pass, so the project copy stays verbatim except the accent),
   because FEATURES F-10 asks for up to 4 columns and F-02's page size 12 is chosen to fill 2, 3 and 4 columns. The
   design review in phase 4 must confirm 4 columns at 1280 px; if it fails the rubric, stop using the `@gallery-4` variant and stay at 3.

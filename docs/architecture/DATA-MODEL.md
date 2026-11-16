@@ -36,16 +36,16 @@ erDiagram
 
 ## 1. Conventions
 
-| Rule | Why |
-|---|---|
-| `integer … generated always as identity` primary keys | No serial sequences to own; ids are public but not secret (deletion needs the session) |
-| `text` + `CHECK` instead of `varchar(n)` | Lengths live in one place each (Zod and the same numbers in CHECK), no truncation (B-43) |
-| `timestamptz(3) NOT NULL DEFAULT now()` | Unambiguous instants (B-42); **millisecond precision** so a JS `Date` in a keyset cursor round-trips exactly (ADR 0007) |
-| Lengths counted in **code points** | Postgres `char_length` counts code points; the shared Zod helper counts `[...s].length` (not UTF-16 units) so both agree |
+| Rule                                                            | Why                                                                                                                                                      |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `integer … generated always as identity` primary keys           | No serial sequences to own; ids are public but not secret (deletion needs the session)                                                                   |
+| `text` + `CHECK` instead of `varchar(n)`                        | Lengths live in one place each (Zod and the same numbers in CHECK), no truncation (B-43)                                                                 |
+| `timestamptz(3) NOT NULL DEFAULT now()`                         | Unambiguous instants (B-42); **millisecond precision** so a JS `Date` in a keyset cursor round-trips exactly (ADR 0007)                                  |
+| Lengths counted in **code points**                              | Postgres `char_length` counts code points; the shared Zod helper counts `[...s].length` (not UTF-16 units) so both agree                                 |
 | Values stored with `\n` line breaks, NFC-normalised and trimmed | Done by the Zod transform; CHECK constraints reject leading/trailing whitespace, `\r` and forbidden characters with the **same** explicit classes (§1.1) |
-| Explicit `ON DELETE` on every FK | `cascade` for owned children (comments) (B-39) |
-| One composite index per keyset ordering | Gallery and comment lists never sort in memory (B-40) |
-| Repositories select explicit columns | No `SELECT *`; `owner_id` read only for ownership checks (B-28, F-43) |
+| Explicit `ON DELETE` on every FK                                | `cascade` for owned children (comments) (B-39)                                                                                                           |
+| One composite index per keyset ordering                         | Gallery and comment lists never sort in memory (B-40)                                                                                                    |
+| Repositories select explicit columns                            | No `SELECT *`; `owner_id` read only for ownership checks (B-28, F-43)                                                                                    |
 
 ### 1.1 Text rules (one definition for Zod and SQL)
 
@@ -54,11 +54,11 @@ in a JS `RegExp` (with the `u` flag) and in a Postgres ARE (`standard_conforming
 embed them; nothing locale-dependent (`[[:cntrl:]]`, `[[:space:]]`, `btrim`) is used. Rationale in ADR
 [0006](./adr/0006-data-model-and-constraints.md).
 
-| Constant | Code points | Used for |
-|---|---|---|
-| `WHITESPACE` | `\u0009-\u000D`, `\u0020`, `\u00A0`, `\u1680`, `\u2000-\u200A`, `\u2028`, `\u2029`, `\u202F`, `\u205F`, `\u3000`, `\uFEFF` (exactly the set JS `trim()` removes) | no leading/trailing whitespace in any text column |
-| `FORBIDDEN_SINGLE_LINE` | `\u0001-\u001F`, `\u007F-\u009F`, `\u2028`, `\u2029`, `\u202A-\u202E`, `\u2066-\u2069` | `author_name`, `title` |
-| `FORBIDDEN_MULTI_LINE` | `\u0001-\u0009`, `\u000B-\u001F`, `\u007F-\u009F`, `\u2028`, `\u2029` (so `\n` is the only allowed control character; `\r` is forbidden because Zod normalises `\r\n?` to `\n`) | `description`, `body` |
+| Constant                | Code points                                                                                                                                                                     | Used for                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `WHITESPACE`            | `\u0009-\u000D`, `\u0020`, `\u00A0`, `\u1680`, `\u2000-\u200A`, `\u2028`, `\u2029`, `\u202F`, `\u205F`, `\u3000`, `\uFEFF` (exactly the set JS `trim()` removes)                | no leading/trailing whitespace in any text column |
+| `FORBIDDEN_SINGLE_LINE` | `\u0001-\u001F`, `\u007F-\u009F`, `\u2028`, `\u2029`, `\u202A-\u202E`, `\u2066-\u2069`                                                                                          | `author_name`, `title`                            |
+| `FORBIDDEN_MULTI_LINE`  | `\u0001-\u0009`, `\u000B-\u001F`, `\u007F-\u009F`, `\u2028`, `\u2029` (so `\n` is the only allowed control character; `\r` is forbidden because Zod normalises `\r\n?` to `\n`) | `description`, `body`                             |
 
 Zod order for every text field: (multi-line only) replace `\r\n?` with `\n` → NFC → `trim()` → count code points
 (`[...s].length`, equal to Postgres `char_length`) → reject U+0000 and the forbidden class. Limits on blank lines are
@@ -133,9 +133,9 @@ export const images = pgTable(
     ),
     check('images_dimensions_positive', sql`${t.width} > 0 AND ${t.height} > 0`),
     check('images_size_positive', sql`${t.sizeBytes} > 0`),
-    check('images_author_name_valid', singleLine(t.authorName, 1, LIMITS.authorName.max)),   // 1..60
-    check('images_title_valid', singleLine(t.title, 1, LIMITS.title.max)),                    // 1..120
-    check('images_description_valid', multiLine(t.description, 0, LIMITS.description.max)),   // 0..2000
+    check('images_author_name_valid', singleLine(t.authorName, 1, LIMITS.authorName.max)), // 1..60
+    check('images_title_valid', singleLine(t.title, 1, LIMITS.title.max)), // 1..120
+    check('images_description_valid', multiLine(t.description, 0, LIMITS.description.max)), // 0..2000
   ],
 );
 
@@ -167,8 +167,8 @@ export const comments = pgTable(
   (t) => [
     // FK lookup + keyset order in one index (B-40, F-27, F-31).
     index('comments_image_id_created_at_id_idx').on(t.imageId, t.createdAt.desc(), t.id.desc()),
-    check('comments_author_name_valid', singleLine(t.authorName, 1, LIMITS.authorName.max)),  // 1..60
-    check('comments_body_valid', multiLine(t.body, 1, LIMITS.commentBody.max)),               // 1..1000
+    check('comments_author_name_valid', singleLine(t.authorName, 1, LIMITS.authorName.max)), // 1..60
+    check('comments_body_valid', multiLine(t.body, 1, LIMITS.commentBody.max)), // 1..1000
   ],
 );
 
@@ -237,16 +237,16 @@ CREATE INDEX "comments_image_id_created_at_id_idx" ON "comments" USING btree ("i
 
 ## 4. Queries the repositories run
 
-| Repository method | SQL shape | Index |
-|---|---|---|
-| `images.list({ limit, after? })` | `SELECT <dto cols>, owner_id FROM images WHERE (created_at, id) < ($t::timestamptz, $id) ORDER BY created_at DESC, id DESC LIMIT $limit + 1` | `images_created_at_id_idx` |
-| `images.findById(id)` | `SELECT <dto cols>, owner_id FROM images WHERE id = $1` | PK |
-| `images.exists(id)` | `SELECT 1 FROM images WHERE id = $1` | PK |
-| `images.insert(row)` | `INSERT … RETURNING <dto cols>, owner_id` | |
-| `images.deleteOwned(id, ownerId)` | `DELETE FROM images WHERE id = $1 AND owner_id = $2 RETURNING object_key` (comments cascade in the same statement) | PK |
-| `comments.listForImage(imageId, { limit, after? })` | `SELECT … FROM comments WHERE image_id = $1 AND (created_at, id) < (…) ORDER BY created_at DESC, id DESC LIMIT $limit + 1` | `comments_image_id_created_at_id_idx` |
-| `comments.insert(row)` | `INSERT … RETURNING …`; FK violation `23503` → `undefined` → service throws 404 | |
-| `comments.findById(id)` / `deleteOwned(id, ownerId)` | as for images | PK |
+| Repository method                                    | SQL shape                                                                                                                                    | Index                                 |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `images.list({ limit, after? })`                     | `SELECT <dto cols>, owner_id FROM images WHERE (created_at, id) < ($t::timestamptz, $id) ORDER BY created_at DESC, id DESC LIMIT $limit + 1` | `images_created_at_id_idx`            |
+| `images.findById(id)`                                | `SELECT <dto cols>, owner_id FROM images WHERE id = $1`                                                                                      | PK                                    |
+| `images.exists(id)`                                  | `SELECT 1 FROM images WHERE id = $1`                                                                                                         | PK                                    |
+| `images.insert(row)`                                 | `INSERT … RETURNING <dto cols>, owner_id`                                                                                                    |                                       |
+| `images.deleteOwned(id, ownerId)`                    | `DELETE FROM images WHERE id = $1 AND owner_id = $2 RETURNING object_key` (comments cascade in the same statement)                           | PK                                    |
+| `comments.listForImage(imageId, { limit, after? })`  | `SELECT … FROM comments WHERE image_id = $1 AND (created_at, id) < (…) ORDER BY created_at DESC, id DESC LIMIT $limit + 1`                   | `comments_image_id_created_at_id_idx` |
+| `comments.insert(row)`                               | `INSERT … RETURNING …`; FK violation `23503` → `undefined` → service throws 404                                                              |                                       |
+| `comments.findById(id)` / `deleteOwned(id, ownerId)` | as for images                                                                                                                                | PK                                    |
 
 The cursor timestamp is always passed as an ISO string with an explicit `::timestamptz` cast, never as a raw
 `Date` parameter (no dependency on driver time-zone conversion).
@@ -256,14 +256,14 @@ row could disappear (concurrent delete by the owner); then the answer is 404, wh
 
 ## 5. Migration plan
 
-| Step | Command | Where |
-|---|---|---|
-| Generate after schema change | `pnpm db:generate` (`pnpm --filter @app/shared build && drizzle-kit generate`, offline; the build is needed because drizzle-kit loads the schema, which imports `@app/shared`, without the `development` condition, ADR 0021 §6) | developer machine; review SQL; commit `drizzle/` with the code |
-| Apply locally | `pnpm db:migrate` (tsx `src/db/migrate.ts`, reads `.env`) | dev |
-| Apply in the stack | compose one-shot service `migrate` (`node dist/db/migrate.js`) before `api` starts | Docker / production |
-| Apply in tests | `test/global-setup.ts` runs `runMigrations(url)` once on the template database `imageboard_template`; the setup file `test/setup-database.ts` gives every test file its own clone (`CREATE DATABASE "t_<random>" TEMPLATE imageboard_template`, conventions §7, ADR 0015) | integration tests |
-| Detect drift | CI: `pnpm --filter @app/api db:generate` (builds `@app/shared` first) then `git diff --exit-code -- apps/api/drizzle` and no untracked files there | lint job |
-| Never | `drizzle-kit push`, editing applied migrations, migrating from the web process at boot, `DROP TABLE` scripts | (B-37) |
+| Step                         | Command                                                                                                                                                                                                                                                                   | Where                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Generate after schema change | `pnpm db:generate` (`pnpm --filter @app/shared build && drizzle-kit generate`, offline; the build is needed because drizzle-kit loads the schema, which imports `@app/shared`, without the `development` condition, ADR 0021 §6)                                          | developer machine; review SQL; commit `drizzle/` with the code |
+| Apply locally                | `pnpm db:migrate` (tsx `src/db/migrate.ts`, reads `.env`)                                                                                                                                                                                                                 | dev                                                            |
+| Apply in the stack           | compose one-shot service `migrate` (`node dist/db/migrate.js`) before `api` starts                                                                                                                                                                                        | Docker / production                                            |
+| Apply in tests               | `test/global-setup.ts` runs `runMigrations(url)` once on the template database `imageboard_template`; the setup file `test/setup-database.ts` gives every test file its own clone (`CREATE DATABASE "t_<random>" TEMPLATE imageboard_template`, conventions §7, ADR 0015) | integration tests                                              |
+| Detect drift                 | CI: `pnpm --filter @app/api db:generate` (builds `@app/shared` first) then `git diff --exit-code -- apps/api/drizzle` and no untracked files there                                                                                                                        | lint job                                                       |
+| Never                        | `drizzle-kit push`, editing applied migrations, migrating from the web process at boot, `DROP TABLE` scripts                                                                                                                                                              | (B-37)                                                         |
 
 `0000_init.sql` is the only migration for the first release. Later changes add `0001_…`.
 F-D1 is proven by `test/migrations.int.test.ts`: it creates its **own empty database** (`createEmptyDatabase()`, not
@@ -341,24 +341,24 @@ Display names are free text in this product, so seeds use the kind of names peop
 
 Dates are `created_at` in UTC. "Comments" lists author → body, oldest first (the API shows newest first).
 
-| # | Slug / subject brief | Title | Author | Description | Date (UTC) | Comments |
-|---|---|---|---|---|---|---|
-| 1 | `fog-over-the-pines` — mist in a conifer forest | Fog over the pines | Marit | Took the early bus out of town just for this. Twenty minutes later the sun burned it all off. | 21 Sep 2026 06:42 | Henrik → "Worth the early bus." · Bea → "This is exactly what I needed on a Monday." |
-| 2 | `last-tram-gone` — empty street or square at night with lights | Last tram already gone | Jonas from Leipzig | Walking home it is, then. The city is very quiet after one. | 24 Sep 2026 23:58 | Noor → "The light on the wet road is lovely." · Pavel → "Been there. Many times." · Jonas from Leipzig → "Forty minutes on foot, for the record." |
-| 3 | `second-coffee` — a cup or mug on a table | Second coffee, first idea | wen | Desk by the window, no meetings until eleven. | 27 Sep 2026 09:15 | (none: shows the empty comments state) |
-| 4 | `dog-refuses-to-pose` — a dog | Bruno refuses to pose | Anouk | This was attempt number nine. He knew exactly what I wanted and did the opposite. | 30 Sep 2026 17:20 | Lucía → "Attempt nine is the winner though." · Kofi → "Give Bruno a treat from me." · Anouk → "He got two." · Sanne → "That look." |
-| 5 | `lake-twice` — still mountain lake with reflection | The ridge, twice | Henrik | No wind at all for about ten minutes, so the lake did the rest. | 3 Oct 2026 07:05 | Marit → "Where is this? I want to go." · Henrik → "Two hours by train, then a long walk uphill." |
-| 6 | `north-sea-october` — sea, beach or coastline | North Sea in October | Sanne | Cold enough for a hat, warm enough to sit on the dunes for an hour. | 6 Oct 2026 15:31 | **25 comments** (see §6.5; demonstrates "Show older comments") |
-| 7 | `long-way-round` — bicycle, road or path | Commute, the long way round | Kofi | Added four kilometres to the ride home because the evening was too good to waste. | 9 Oct 2026 18:47 | Dariusz → "Best kind of detour." · Yuki → "Is that the canal path?" · Kofi → "Yes, the stretch after the lock." |
-| 8 | `balconies` — building facade, windows, architecture | Every balcony different | Lucía | Same building, forty balconies, forty ideas about plants. | 12 Oct 2026 11:02 | Ines K. → "Third row, second from the left. That one." |
-| 9 | `before-the-storm` — field, meadow or open landscape under a big sky | Before the storm | Dariusz | It started raining about five minutes after this. I was not dressed for it. | 15 Oct 2026 16:10 | ole_b → "The colour of that sky." · Dariusz → "Soaked to the bone, still worth it." |
-| 10 | `library-card` — books, shelves or a reading place | Library card renewed after six years | Ines K. | They still had my old address. Starting with something short. | 18 Oct 2026 13:44 | Bea → "What did you pick?" · Ines K. → "A slim book of short stories, due in three weeks." · wen → "Libraries are the best." |
-| 11 | `bridge-in-the-rain` — bridge, river or rain | Bridge in the rain | Pavel | Umbrella in one hand, phone in the other, no regrets. | 22 Oct 2026 08:26 | Anouk → "Moody in the best way." |
-| 12 | `first-snow` — snow on mountains or trees | First snow on the ridge | Yuki | Overnight, without any warning. The valley is still green. | 26 Oct 2026 07:58 | Henrik → "Early this year." · Marit → "Skis are coming out of the cellar." · Yuki → "Not yet, give it a month." |
-| 13 | `borrowed-view` — flowers or plants | The neighbour's garden, borrowed view | Bea | I have no garden, but my kitchen window looks onto this. | 30 Oct 2026 10:12 | Lucía → "Best kind of garden: someone else waters it." · Bea → "Exactly my philosophy." |
-| 14 | `low-tide` — rocks, shore or water texture | Rocks at low tide | ole_b | The water came back faster than I expected. Wet shoes all the way home. | 3 Nov 2026 14:39 | Sanne → "Classic." · Noor → "Lovely textures." |
-| 15 | `no-other-cars` — road through a landscape | The road with no other cars | Noor | Saw maybe three cars in an hour. Stopped in the middle of the road for this one. | 7 Nov 2026 12:05 | Tomás R. → "Careful out there." · Noor → "Checked twice, promise." · Kofi → "Where does it go?" · Noor → "To a very small village with a very good bakery." |
-| 16 | `fifth-floor` — rooftops, skyline or view from above | Rooftops from the fifth floor | Tomás R. | New flat, no lift, but this view makes the stairs bearable. | 12 Nov 2026 19:23 | Jonas from Leipzig → "Congratulations on the new place." · Pavel → "Five floors builds character." · Tomás R. → "Thank you both. Ask me again in winter." |
+| #   | Slug / subject brief                                                 | Title                                 | Author             | Description                                                                                   | Date (UTC)        | Comments                                                                                                                                                    |
+| --- | -------------------------------------------------------------------- | ------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `fog-over-the-pines` — mist in a conifer forest                      | Fog over the pines                    | Marit              | Took the early bus out of town just for this. Twenty minutes later the sun burned it all off. | 21 Sep 2026 06:42 | Henrik → "Worth the early bus." · Bea → "This is exactly what I needed on a Monday."                                                                        |
+| 2   | `last-tram-gone` — empty street or square at night with lights       | Last tram already gone                | Jonas from Leipzig | Walking home it is, then. The city is very quiet after one.                                   | 24 Sep 2026 23:58 | Noor → "The light on the wet road is lovely." · Pavel → "Been there. Many times." · Jonas from Leipzig → "Forty minutes on foot, for the record."           |
+| 3   | `second-coffee` — a cup or mug on a table                            | Second coffee, first idea             | wen                | Desk by the window, no meetings until eleven.                                                 | 27 Sep 2026 09:15 | (none: shows the empty comments state)                                                                                                                      |
+| 4   | `dog-refuses-to-pose` — a dog                                        | Bruno refuses to pose                 | Anouk              | This was attempt number nine. He knew exactly what I wanted and did the opposite.             | 30 Sep 2026 17:20 | Lucía → "Attempt nine is the winner though." · Kofi → "Give Bruno a treat from me." · Anouk → "He got two." · Sanne → "That look."                          |
+| 5   | `lake-twice` — still mountain lake with reflection                   | The ridge, twice                      | Henrik             | No wind at all for about ten minutes, so the lake did the rest.                               | 3 Oct 2026 07:05  | Marit → "Where is this? I want to go." · Henrik → "Two hours by train, then a long walk uphill."                                                            |
+| 6   | `north-sea-october` — sea, beach or coastline                        | North Sea in October                  | Sanne              | Cold enough for a hat, warm enough to sit on the dunes for an hour.                           | 6 Oct 2026 15:31  | **25 comments** (see §6.5; demonstrates "Show older comments")                                                                                              |
+| 7   | `long-way-round` — bicycle, road or path                             | Commute, the long way round           | Kofi               | Added four kilometres to the ride home because the evening was too good to waste.             | 9 Oct 2026 18:47  | Dariusz → "Best kind of detour." · Yuki → "Is that the canal path?" · Kofi → "Yes, the stretch after the lock."                                             |
+| 8   | `balconies` — building facade, windows, architecture                 | Every balcony different               | Lucía              | Same building, forty balconies, forty ideas about plants.                                     | 12 Oct 2026 11:02 | Ines K. → "Third row, second from the left. That one."                                                                                                      |
+| 9   | `before-the-storm` — field, meadow or open landscape under a big sky | Before the storm                      | Dariusz            | It started raining about five minutes after this. I was not dressed for it.                   | 15 Oct 2026 16:10 | ole_b → "The colour of that sky." · Dariusz → "Soaked to the bone, still worth it."                                                                         |
+| 10  | `library-card` — books, shelves or a reading place                   | Library card renewed after six years  | Ines K.            | They still had my old address. Starting with something short.                                 | 18 Oct 2026 13:44 | Bea → "What did you pick?" · Ines K. → "A slim book of short stories, due in three weeks." · wen → "Libraries are the best."                                |
+| 11  | `bridge-in-the-rain` — bridge, river or rain                         | Bridge in the rain                    | Pavel              | Umbrella in one hand, phone in the other, no regrets.                                         | 22 Oct 2026 08:26 | Anouk → "Moody in the best way."                                                                                                                            |
+| 12  | `first-snow` — snow on mountains or trees                            | First snow on the ridge               | Yuki               | Overnight, without any warning. The valley is still green.                                    | 26 Oct 2026 07:58 | Henrik → "Early this year." · Marit → "Skis are coming out of the cellar." · Yuki → "Not yet, give it a month."                                             |
+| 13  | `borrowed-view` — flowers or plants                                  | The neighbour's garden, borrowed view | Bea                | I have no garden, but my kitchen window looks onto this.                                      | 30 Oct 2026 10:12 | Lucía → "Best kind of garden: someone else waters it." · Bea → "Exactly my philosophy."                                                                     |
+| 14  | `low-tide` — rocks, shore or water texture                           | Rocks at low tide                     | ole_b              | The water came back faster than I expected. Wet shoes all the way home.                       | 3 Nov 2026 14:39  | Sanne → "Classic." · Noor → "Lovely textures."                                                                                                              |
+| 15  | `no-other-cars` — road through a landscape                           | The road with no other cars           | Noor               | Saw maybe three cars in an hour. Stopped in the middle of the road for this one.              | 7 Nov 2026 12:05  | Tomás R. → "Careful out there." · Noor → "Checked twice, promise." · Kofi → "Where does it go?" · Noor → "To a very small village with a very good bakery." |
+| 16  | `fifth-floor` — rooftops, skyline or view from above                 | Rooftops from the fifth floor         | Tomás R.           | New flat, no lift, but this view makes the stairs bearable.                                   | 12 Nov 2026 19:23 | Jonas from Leipzig → "Congratulations on the new place." · Pavel → "Five floors builds character." · Tomás R. → "Thank you both. Ask me again in winter."   |
 
 That is 16 images, 35 comments in the table plus 25 on image 6 = **60 comments**. Image 3 has none (empty state).
 

@@ -21,7 +21,7 @@ project-specific content and bans lorem ipsum, fake names and generic stock or A
 - Titles, descriptions, names and 60 comments are hand-written (DATA-MODEL §6.4–6.5) and adjusted to what each
   chosen photo shows. One image has 25 comments (pagination demo), one has none (empty state).
 - `runSeed()` builds the upload module like the composition root and calls `port.ingest({ buffer, size },
-  { objectKey })` with the fixed key from `manifest.json` (same sniff, sharp pipeline and preview as uploads, ADR 0017
+{ objectKey })` with the fixed key from `manifest.json` (same sniff, sharp pipeline and preview as uploads, ADR 0017
   and 0018), then inserts the row and comments with fixed dates and a non-session owner id; rows whose key already
   exists are skipped (idempotent). Runs only with an explicit `SEED_ALLOW=true`, which the `db:seed` script sets
   (cross-project seed guard, `project-scaffold/references/conventions.md` §8). The guard lives in the entry point

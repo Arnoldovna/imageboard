@@ -12,6 +12,7 @@ objects (B-07), and deletes rows in two unawaited, non-transactional steps (B-22
 ## Decision
 
 **Create** (`images.service.create`):
+
 1. Everything that can fail cheaply happens first (fields, sniff, decode) — nothing stored yet.
 2. `PutObject` original, then preview (ADR 0018). If either fails: anything already put is discarded, throw, no
    row.
@@ -19,6 +20,7 @@ objects (B-07), and deletes rows in two unawaited, non-transactional steps (B-22
 4. Never hold a DB transaction open across the S3 call.
 
 **Delete image** (`images.service.remove`):
+
 1. `DELETE FROM images WHERE id = $1 AND owner_id = $2 RETURNING object_key` — one atomic statement; comments go by
    `ON DELETE CASCADE`.
 2. Zero rows → `exists(id)` → `404 not-found` or `403 not-owner`.

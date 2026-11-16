@@ -18,16 +18,20 @@ which a deployment run from Germany has to justify in a privacy notice.
 
 Built now (cheap, and tested like everything else):
 
-- **nginx forwards the original scheme**:
-  `map $http_x_forwarded_proto $fwd_proto { default $http_x_forwarded_proto; '' $scheme; }` and
-  `proxy_set_header X-Forwarded-Proto $fwd_proto;`. `TRUST_PROXY` = the real number of hops (documented in
-  `.env.example`). `security-headers.int.test.ts` asserts the `Secure` cookie when `X-Forwarded-Proto: https`
+- **nginx forwards the original scheme, but only from the load balancer**: a `geo` block marks peers inside
+  `TRUSTED_PROXY_CIDR`, and `map "$from_trusted_proxy:$http_x_forwarded_proto" $fwd_proto` keeps the header only for
+  those peers and only when it is `http` or `https`; everyone else gets nginx's own `$scheme`.
+  `proxy_set_header X-Forwarded-Proto $fwd_proto;`. Express takes the left-most `X-Forwarded-Proto` once the hop is
+  trusted, so forwarding a client's header unchanged (the first draft's
+  `map … { default $http_x_forwarded_proto; '' $scheme; }`) let any client that reaches nginx directly claim https
+  over plain http. `TRUST_PROXY` = the real number of hops (documented in `.env.example`). `security-headers.int.test.ts` asserts the `Secure` cookie when `X-Forwarded-Proto: https`
   arrives through the configured hops.
 - **nginx config is a template** (`apps/web/templates/default.conf.template`, rendered by the image's envsubst
-  entrypoint): `API_MAX_BODY_SIZE` (default `6m`) and `CSP_IMG_SRC_EXTRA` (default empty; a CDN origin later) are
-  the only variables. Defaults are set with `ENV` in the web Dockerfile, together with
-  `NGINX_ENVSUBST_FILTER=^(API_MAX_BODY_SIZE|CSP_IMG_SRC_EXTRA)$` so the entrypoint never touches nginx's own
-  `$variables` in the template.
+  entrypoint): `API_MAX_BODY_SIZE` (default `6m`), `CSP_IMG_SRC_EXTRA` (default empty; a CDN origin later) and
+  `TRUSTED_PROXY_CIDR` (default `0.0.0.0/32`, the unspecified address, which is never a peer) are the only variables. Defaults are
+  set with `ENV` in the web Dockerfile, together with
+  `NGINX_ENVSUBST_FILTER=^(API_MAX_BODY_SIZE|CSP_IMG_SRC_EXTRA|TRUSTED_PROXY_CIDR)$` so the entrypoint never touches
+  nginx's own `$variables` in the template. Compose passes `API_MAX_BODY_SIZE` from `.env`.
 - **Takedown path**: `pnpm --filter @app/api admin:remove-image <id>` (`src/scripts/admin-remove-image.ts`) loads env,
   builds the modules like the composition root and calls `imagesModule.adminRemove(id)` (ADR 0017), which deletes the
   row (comments cascade) and discards original and preview. It logs `{ imageId, objectKey }` at `warn` and refuses to
@@ -45,8 +49,10 @@ description; none of it blocks the Definition of Done for the private repository
    `Content-Disposition`, `CSP sandbox` and CORP), or applies an equivalent response-headers policy; the bucket stays
    private. `MEDIA_PUBLIC_BASE_URL` and `CSP_IMG_SRC_EXTRA` are set together. Delete must invalidate both media paths.
 2. Production Redis per ADR 0002 (AOF, `noeviction` for sessions, optional separate limiter instance), memory alert.
-3. `TRUST_PROXY` set to the measured hop count; verify `Secure` + `__Host-imageboard.sid` in a browser.
-4. Load balancer health probe targets the api container's `/api/health`, not the public origin.
+3. `TRUST_PROXY` set to the measured hop count and `TRUSTED_PROXY_CIDR` (web container) to the load balancer's
+   address range; verify `Secure` + `__Host-imageboard.sid` in a browser.
+4. Load balancer health probe targets the api container's `/api/health`, not the public origin; `SHUTDOWN_DELAY_MS`
+   ≥ its probe interval × unhealthy threshold, and the platform's stop timeout above that plus 10 s (ADR 0013).
 5. Imprint (Impressum) and privacy page (log contents, retention, session cookie, no tracking) linked from the
    footer; content written and confirmed by Marina.
 6. A contact address for takedown requests in the privacy page; the admin script above is the procedure.

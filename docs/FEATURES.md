@@ -11,11 +11,11 @@ Several criteria below exist specifically to close a `B-xx` item.
 
 ## 0. Conventions
 
-| Tag | Meaning |
-|---|---|
-| **(legacy)** | The legacy app has this behaviour, and the rebuild keeps it. |
+| Tag           | Meaning                                                                                              |
+| ------------- | ---------------------------------------------------------------------------------------------------- |
+| **(legacy)**  | The legacy app has this behaviour, and the rebuild keeps it.                                         |
 | **(changed)** | The legacy app has this feature, but the rebuild deliberately changes it (usually because of a bug). |
-| **(new)** | The legacy app does not have this. It is a modern expectation added for the rebuild. |
+| **(new)**     | The legacy app does not have this. It is a modern expectation added for the rebuild.                 |
 
 - "MUST" criteria are binding. Ideas that are explicitly not binding are listed in §10 (Out of scope).
 - Test level hints: **[U]** unit (Vitest), **[A]** API/integration (Supertest + Testcontainers),
@@ -28,20 +28,20 @@ Several criteria below exist specifically to close a `B-xx` item.
 
 This is what the legacy app actually does, and where each item goes in the rebuild:
 
-| # | Legacy behaviour | Legacy location | Rebuild |
-|---|---|---|---|
-| L-1 | Gallery of the 9 newest images, newest first | `db.js:46-52`, `index.html:40-50` | F-01, F-02 |
-| L-2 | Image title appears only on mouse hover | `style.css:25-28, 49-51` | F-03 (changed) |
-| L-3 | "MORE" button loads the next 9 older images | `db.js:33-45`, `script.js:183-205` | F-04, F-05 |
-| L-4 | Clicking an image opens a full-screen modal (image, title, description, date, username) | `index.html:73-121`, `script.js:2-98` | F-11 |
-| L-5 | Deep link through `#<id>` opens the modal on load; closing clears the hash | `script.js:113, 118-121, 143-146` | F-12 |
-| L-6 | Comments listed in the modal (text, username, date) | `db.js:73-79`, `index.html:107-117` | F-26 |
-| L-7 | Anyone can add a comment with a free-text username; it is prepended to the list | `server.js:74-84`, `script.js:58-80` | F-28 |
-| L-8 | **Anyone** can delete **any** image; its comments are deleted first | `server.js:109-126`, `db.js:93-109` | F-35, F-36 (changed) |
-| L-9 | Upload form (username, title, description, file) uploads to S3 and prepends the image to the gallery | `server.js:86-107`, `s3.js`, `script.js:147-166` | F-17 to F-25 |
-| L-10 | Upload size limit 2 MiB (server); `accept="image/*"` (client only) | `server.js:25-27`, `index.html:32` | F-19, F-20 (changed) |
-| L-11 | Upload bar sticks to the top when scrolling (JavaScript scroll handler) | `script.js:210-223`, `style.css:57-62` | F-57 (changed) |
-| L-12 | Header heading "form/vue"; footer with GitHub and LinkedIn icon links | `index.html:21-24, 57-65` | F-58, F-59 |
+| #    | Legacy behaviour                                                                                     | Legacy location                                  | Rebuild              |
+| ---- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------ | -------------------- |
+| L-1  | Gallery of the 9 newest images, newest first                                                         | `db.js:46-52`, `index.html:40-50`                | F-01, F-02           |
+| L-2  | Image title appears only on mouse hover                                                              | `style.css:25-28, 49-51`                         | F-03 (changed)       |
+| L-3  | "MORE" button loads the next 9 older images                                                          | `db.js:33-45`, `script.js:183-205`               | F-04, F-05           |
+| L-4  | Clicking an image opens a full-screen modal (image, title, description, date, username)              | `index.html:73-121`, `script.js:2-98`            | F-11                 |
+| L-5  | Deep link through `#<id>` opens the modal on load; closing clears the hash                           | `script.js:113, 118-121, 143-146`                | F-12                 |
+| L-6  | Comments listed in the modal (text, username, date)                                                  | `db.js:73-79`, `index.html:107-117`              | F-26                 |
+| L-7  | Anyone can add a comment with a free-text username; it is prepended to the list                      | `server.js:74-84`, `script.js:58-80`             | F-28                 |
+| L-8  | **Anyone** can delete **any** image; its comments are deleted first                                  | `server.js:109-126`, `db.js:93-109`              | F-35, F-36 (changed) |
+| L-9  | Upload form (username, title, description, file) uploads to S3 and prepends the image to the gallery | `server.js:86-107`, `s3.js`, `script.js:147-166` | F-17 to F-25         |
+| L-10 | Upload size limit 2 MiB (server); `accept="image/*"` (client only)                                   | `server.js:25-27`, `index.html:32`               | F-19, F-20 (changed) |
+| L-11 | Upload bar sticks to the top when scrolling (JavaScript scroll handler)                              | `script.js:210-223`, `style.css:57-62`           | F-57 (changed)       |
+| L-12 | Header heading "form/vue"; footer with GitHub and LinkedIn icon links                                | `index.html:21-24, 57-65`                        | F-58, F-59           |
 
 The legacy app has **no authentication, no sessions, no real-time features, no validation, no error/empty/loading
 states and no tests**.
@@ -62,31 +62,31 @@ comments (id SERIAL PK, username VARCHAR(255) NOT NULL, comment TEXT NOT NULL,
 
 `images`
 
-| Column | Type / constraint | Notes |
-|---|---|---|
-| `id` | `integer generated always as identity` PK | |
-| `object_key` | `text NOT NULL UNIQUE` | Storage key only (for example `images/<uuid>.webp`), **never** an absolute URL (B-35) |
-| `mime_type` | `text NOT NULL CHECK (mime_type IN ('image/jpeg','image/png','image/webp','image/gif'))` | Detected from the file content, not taken from the client |
-| `width`, `height` | `integer NOT NULL CHECK (> 0)` | Lets the gallery reserve space and avoid layout shift (F-09) |
-| `size_bytes` | `integer NOT NULL CHECK (> 0)` | |
-| `author_name` | `text NOT NULL CHECK (char_length(btrim(author_name)) BETWEEN 1 AND 60)` | Free-text display name (renames legacy `username`) |
-| `title` | `text NOT NULL CHECK (char_length(btrim(title)) BETWEEN 1 AND 120)` | |
-| `description` | `text NOT NULL DEFAULT '' CHECK (char_length(description) <= 2000)` | |
-| `owner_id` | `uuid NOT NULL` | Anonymous session identity of the uploader (F-34). It is never exposed in the API. |
-| `created_at` | `timestamptz NOT NULL DEFAULT now()` | |
+| Column            | Type / constraint                                                                        | Notes                                                                                 |
+| ----------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `id`              | `integer generated always as identity` PK                                                |                                                                                       |
+| `object_key`      | `text NOT NULL UNIQUE`                                                                   | Storage key only (for example `images/<uuid>.webp`), **never** an absolute URL (B-35) |
+| `mime_type`       | `text NOT NULL CHECK (mime_type IN ('image/jpeg','image/png','image/webp','image/gif'))` | Detected from the file content, not taken from the client                             |
+| `width`, `height` | `integer NOT NULL CHECK (> 0)`                                                           | Lets the gallery reserve space and avoid layout shift (F-09)                          |
+| `size_bytes`      | `integer NOT NULL CHECK (> 0)`                                                           |                                                                                       |
+| `author_name`     | `text NOT NULL CHECK (char_length(btrim(author_name)) BETWEEN 1 AND 60)`                 | Free-text display name (renames legacy `username`)                                    |
+| `title`           | `text NOT NULL CHECK (char_length(btrim(title)) BETWEEN 1 AND 120)`                      |                                                                                       |
+| `description`     | `text NOT NULL DEFAULT '' CHECK (char_length(description) <= 2000)`                      |                                                                                       |
+| `owner_id`        | `uuid NOT NULL`                                                                          | Anonymous session identity of the uploader (F-34). It is never exposed in the API.    |
+| `created_at`      | `timestamptz NOT NULL DEFAULT now()`                                                     |                                                                                       |
 
 Index: `(created_at DESC, id DESC)` for keyset pagination.
 
 `comments`
 
-| Column | Type / constraint | Notes |
-|---|---|---|
-| `id` | identity PK | |
-| `image_id` | `integer NOT NULL REFERENCES images(id) ON DELETE CASCADE` | Renames legacy `user_id` (B-38) |
-| `author_name` | `text NOT NULL CHECK (1..60 after trim)` | |
-| `body` | `text NOT NULL CHECK (1..1000 after trim)` | Renames legacy `comment` |
-| `owner_id` | `uuid NOT NULL` | Anonymous session identity of the commenter |
-| `created_at` | `timestamptz NOT NULL DEFAULT now()` | |
+| Column        | Type / constraint                                          | Notes                                       |
+| ------------- | ---------------------------------------------------------- | ------------------------------------------- |
+| `id`          | identity PK                                                |                                             |
+| `image_id`    | `integer NOT NULL REFERENCES images(id) ON DELETE CASCADE` | Renames legacy `user_id` (B-38)             |
+| `author_name` | `text NOT NULL CHECK (1..60 after trim)`                   |                                             |
+| `body`        | `text NOT NULL CHECK (1..1000 after trim)`                 | Renames legacy `comment`                    |
+| `owner_id`    | `uuid NOT NULL`                                            | Anonymous session identity of the commenter |
+| `created_at`  | `timestamptz NOT NULL DEFAULT now()`                       |                                             |
 
 Index: `(image_id, created_at DESC, id DESC)` (B-40).
 
@@ -101,29 +101,29 @@ Index: `(image_id, created_at DESC, id DESC)` (B-40).
 
 ### 3.1 Legacy (reference only)
 
-| Method | Path | Behaviour |
-|---|---|---|
-| GET | `/image` | 9 newest images (array) |
-| GET | `/image/more/:id` | 9 images with `id < :id` |
-| GET | `/modal/:id` | `{ result: image, data: comments[] }`; `{}` on error |
-| POST | `/comment/:id` | JSON `{username, comment}` → comment row |
-| POST | `/upload` | multipart `file, username, title, desc` → `[imageRow]` |
-| POST | `/delete/:id` | deletes comments + image, then `302 → /` |
-| — | `#<id>` (client hash) | opens the modal |
+| Method | Path                  | Behaviour                                              |
+| ------ | --------------------- | ------------------------------------------------------ |
+| GET    | `/image`              | 9 newest images (array)                                |
+| GET    | `/image/more/:id`     | 9 images with `id < :id`                               |
+| GET    | `/modal/:id`          | `{ result: image, data: comments[] }`; `{}` on error   |
+| POST   | `/comment/:id`        | JSON `{username, comment}` → comment row               |
+| POST   | `/upload`             | multipart `file, username, title, desc` → `[imageRow]` |
+| POST   | `/delete/:id`         | deletes comments + image, then `302 → /`               |
+| —      | `#<id>` (client hash) | opens the modal                                        |
 
 ### 3.2 Target API (new). Prefix `/api`, JSON, contract defined as Zod schemas in `packages/shared`.
 
-| Method | Path | Success | Errors |
-|---|---|---|---|
-| GET | `/api/images?cursor=&limit=` | `200 { items: ImageDto[], nextCursor: string \| null }` | 400 |
-| GET | `/api/images/:id` | `200 ImageDto` | 400 (non-integer id), 404 |
-| POST | `/api/images` (multipart: `file`, `authorName`, `title`, `description`) | `201 ImageDto` + `Location` | 400, 403 (CSRF), 413, 415, 429 |
-| DELETE | `/api/images/:id` | `204` | 403 (not owner / CSRF), 404, 429 |
-| GET | `/api/images/:id/comments?cursor=&limit=` | `200 { items: CommentDto[], nextCursor }` | 400, 404 |
-| POST | `/api/images/:id/comments` (JSON `authorName`, `body`) | `201 CommentDto` | 400, 403, 404, 429 |
-| DELETE | `/api/comments/:id` | `204` | 403, 404, 429 |
-| GET | `/api/session` | `200 { csrfToken }` and the session cookie is set | — |
-| GET | `/api/health` | `200 { status: "ok" }` when DB and storage are reachable, otherwise `503` | — (internal: not routed by nginx, see §14 R-08) |
+| Method | Path                                                                    | Success                                                                   | Errors                                          |
+| ------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------- |
+| GET    | `/api/images?cursor=&limit=`                                            | `200 { items: ImageDto[], nextCursor: string \| null }`                   | 400                                             |
+| GET    | `/api/images/:id`                                                       | `200 ImageDto`                                                            | 400 (non-integer id), 404                       |
+| POST   | `/api/images` (multipart: `file`, `authorName`, `title`, `description`) | `201 ImageDto` + `Location`                                               | 400, 403 (CSRF), 413, 415, 429                  |
+| DELETE | `/api/images/:id`                                                       | `204`                                                                     | 403 (not owner / CSRF), 404, 429                |
+| GET    | `/api/images/:id/comments?cursor=&limit=`                               | `200 { items: CommentDto[], nextCursor }`                                 | 400, 404                                        |
+| POST   | `/api/images/:id/comments` (JSON `authorName`, `body`)                  | `201 CommentDto`                                                          | 400, 403, 404, 429                              |
+| DELETE | `/api/comments/:id`                                                     | `204`                                                                     | 403, 404, 429                                   |
+| GET    | `/api/session`                                                          | `200 { csrfToken }` and the session cookie is set                         | —                                               |
+| GET    | `/api/health`                                                           | `200 { status: "ok" }` when DB and storage are reachable, otherwise `503` | — (internal: not routed by nginx, see §14 R-08) |
 
 `ImageDto = { id, url, previewUrl, width, height, mimeType, authorName, title, description, createdAt (ISO 8601),
 canDelete }` (`previewUrl` added by §14 R-06).
@@ -190,7 +190,7 @@ and a catch-all 404 page.
 - **F-19** (changed) [A]: Only JPEG, PNG, WebP and GIF are accepted. The type is determined from the
   **file contents (magic bytes)**, not from the client's MIME type or file extension. SVG, HTML, PDF, renamed
   files and everything else are rejected with `415` and the message "Only JPEG, PNG, WebP or GIF images are
-  allowed." (B-04, B-05) *(Annotated, §14 R-07: animated PNG (APNG) counts as PNG and is stored as a static PNG.)*
+  allowed." (B-04, B-05) _(Annotated, §14 R-07: animated PNG (APNG) counts as PNG and is stored as a static PNG.)_
 - **F-20** (changed) [A][E]: Maximum file size is `UPLOAD_MAX_BYTES` (default 5 MiB; legacy 2 MiB, which most
   phone photos exceed). Larger files are rejected with `413` problem+json ("The image must be 5 MB or smaller.").
   The client checks size and type **before** sending and shows the same message.
@@ -199,8 +199,8 @@ and a catch-all 404 page.
   to 1 file and the known text fields; anything else gives `400`.
 - **F-22** (new) [A]: The stored image is re-encoded. EXIF and other metadata (including GPS location) is
   stripped (B-06). The stored object's `Content-Type` equals the detected type, and objects are served with
-  `X-Content-Type-Options: nosniff`. Width, height and size are stored. *(Annotated, §14 R-06: a derived WebP preview
-  rendition is stored next to the original for gallery tiles; this criterion applies to the original.)*
+  `X-Content-Type-Options: nosniff`. Width, height and size are stored. _(Annotated, §14 R-06: a derived WebP preview
+  rendition is stored next to the original for gallery tiles; this criterion applies to the original.)_
 - **F-23** (new) [A]: The upload is consistent. If the DB insert fails after the object was stored, the object is
   deleted again. If storage fails, no row is created. No temporary files remain on disk after a success or a
   failure (B-25, B-34).
@@ -284,8 +284,8 @@ anonymous sessions instead:
 - **F-46** (new) [A]: Structured logging via pino with a request id, level-based. Bodies, cookies, CSRF tokens and
   credentials are redacted. `console.log` is banned by ESLint (B-29).
 - **F-47** (new) [A]: `GET /api/health` reports readiness (DB + storage). On `SIGTERM` the server stops accepting
-  connections, finishes in-flight requests and closes the DB pool. *(Annotated, §14 R-08: the endpoint is for the
-  container healthcheck and load balancer only; nginx does not route it publicly, and results are cached for 3 s.)*
+  connections, finishes in-flight requests and closes the DB pool. _(Annotated, §14 R-08: the endpoint is for the
+  container healthcheck and load balancer only; nginx does not route it publicly, and results are cached for 3 s.)_
 - **F-48** (new) [A]: Object storage uses AWS SDK v3 (MinIO locally through Docker Compose). The bucket uses **no
   object ACLs**. Read access goes through a bucket policy/CDN or signed URLs, as decided in an ADR. The DB stores
   only the object key (B-08, B-35, B-36).
@@ -309,17 +309,17 @@ anonymous sessions instead:
   is named by that title through `aria-labelledby` (WCAG technique H2; a title in both `alt` and text would read it
   twice). Decorative icons use `alt=""`/`aria-hidden`. Icon-only controls have an accessible name (B-65, B-73).
 - **F-56** (new) [E]: Status changes (uploaded, deleted, comment added, errors) are announced through an
-  `aria-live="polite"` region. Errors that block a form move focus to the first invalid field. *(Annotated, §14 R-04:
+  `aria-live="polite"` region. Errors that block a form move focus to the first invalid field. _(Annotated, §14 R-04:
   while a modal dialog is open, the announcement goes to a live region inside that dialog, because the page behind a
-  modal dialog is inert.)*
+  modal dialog is inert.)_
 - **F-57** (changed, **revised** §14 R-03) [E]: The upload bar may stay visible while scrolling, but only through CSS
   `position: sticky` (no scroll listener), and it causes no layout jump (B-58). The sticky part is a compact one-row
   bar with an "Upload an image" disclosure button (`aria-expanded`); the form itself opens below it in normal page
   flow, on every screen width.
 - **F-58** (changed) [E]: The footer links to Marina's GitHub profile and LinkedIn with visible or accessible text
   ("GitHub", "LinkedIn") and `rel="noopener"` where `target="_blank"` is used. Icons are self-made or properly
-  licensed and attributed (B-73). *(Annotated, §14 R-09: both profile URLs live in one constant marked "Marina to
-  confirm"; tests check only that the links exist.)*
+  licensed and attributed (B-73). _(Annotated, §14 R-09: both profile URLs live in one constant marked "Marina to
+  confirm"; tests check only that the links exist.)_
 - **F-59** (legacy) [E]: The page header shows the app name as `h1`. The wording follows the maw design
   ("form/vue" may stay as a tagline).
 - **F-60** (new) [E]: Animations and hover transforms respect `prefers-reduced-motion: reduce`.
@@ -339,7 +339,7 @@ anonymous sessions instead:
   buckets (B-44).
 - **F-64** (new): `pnpm dev` starts the API and web app against Docker Compose (Postgres, Redis, MinIO) using only
   `.env` values documented in `.env.example`. The README explains setup in ≤ 5 commands (B-33, B-85).
-  *(Annotated: the setup is `pnpm install`, `pnpm dev:setup`, `pnpm dev`; see OVERVIEW §16.)*
+  _(Annotated: the setup is `pnpm install`, `pnpm dev:setup`, `pnpm dev`; see OVERVIEW §16.)_
 
 ## 13. Out of scope (not part of the Definition of Done)
 
@@ -354,14 +354,14 @@ anonymous sessions instead:
 The architecture critique (Etappe 1, round 1) changed or annotated these criteria. Each change is justified in the
 ADR named; the criteria above carry a "revised" or "annotated" marker pointing here.
 
-| # | Criteria | Change | ADR |
-|---|---|---|---|
-| R-01 | F-34 | Sessions that never created content are provisional (24 h); full lifetime after the first upload or comment; identity creation rate-limited | 0002 |
-| R-02 | F-40 | Extra limiters: media (1200 / 5 min), identities (20 / h), global uploads (200 / day); health not limited (not public) | 0013 |
-| R-03 | F-57 | Only a one-row bar is sticky; the form opens in normal flow on every width (was: whole form sticky on ≥ md) | 0012 |
-| R-04 | F-56 | Announcements go to a live region inside the open dialog | 0010, 0011 |
-| R-05 | F-03, F-55 | Tile image `alt=""`, tile link named by the title via `aria-labelledby`; dialog image keeps `alt` = title | 0012 |
-| R-06 | §3.2, F-22, §13 | One WebP preview rendition per image; `ImageDto.previewUrl` | 0018 |
-| R-07 | F-19 | APNG accepted as PNG (stored as static PNG) | 0005 |
-| R-08 | §3.2, F-47 | `/api/health` internal only, cached 3 s | 0013 |
-| R-09 | F-58 | Profile URLs in one constant to be confirmed by Marina | OVERVIEW §8.3 |
+| #    | Criteria        | Change                                                                                                                                      | ADR           |
+| ---- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| R-01 | F-34            | Sessions that never created content are provisional (24 h); full lifetime after the first upload or comment; identity creation rate-limited | 0002          |
+| R-02 | F-40            | Extra limiters: media (1200 / 5 min), identities (20 / h), global uploads (200 / day); health not limited (not public)                      | 0013          |
+| R-03 | F-57            | Only a one-row bar is sticky; the form opens in normal flow on every width (was: whole form sticky on ≥ md)                                 | 0012          |
+| R-04 | F-56            | Announcements go to a live region inside the open dialog                                                                                    | 0010, 0011    |
+| R-05 | F-03, F-55      | Tile image `alt=""`, tile link named by the title via `aria-labelledby`; dialog image keeps `alt` = title                                   | 0012          |
+| R-06 | §3.2, F-22, §13 | One WebP preview rendition per image; `ImageDto.previewUrl`                                                                                 | 0018          |
+| R-07 | F-19            | APNG accepted as PNG (stored as static PNG)                                                                                                 | 0005          |
+| R-08 | §3.2, F-47      | `/api/health` internal only, cached 3 s                                                                                                     | 0013          |
+| R-09 | F-58            | Profile URLs in one constant to be confirmed by Marina                                                                                      | OVERVIEW §8.3 |

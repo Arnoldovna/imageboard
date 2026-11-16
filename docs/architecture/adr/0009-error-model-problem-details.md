@@ -23,7 +23,7 @@ middleware; `express-feature-module` provides `AppError` + `toProblem`.
   client (ADR 0010).
 - Mapping in `shared/http/problem.ts`: `AppError` subclasses → their fields; `MulterError` → 413
   (`LIMIT_FILE_SIZE`), 400 `validation-failed` with `errors: [{ field: err.field, location: 'body', message: <that
-  field's "too long" message> }]` (`LIMIT_FIELD_VALUE`), or 400 `malformed-request` (all other multer codes);
+field's "too long" message> }]` (`LIMIT_FIELD_VALUE`), or 400 `malformed-request` (all other multer codes);
   body-parser `entity.too.large` → 413, `entity.parse.failed` → 400 `malformed-request`; csrf-csrf
   `EBADCSRFTOKEN` → 403 `csrf-invalid`; rate limiter → 429 `rate-limited`; Postgres `23503` on comment insert → 404
   (in the repository/service, not the handler); Postgres `23514` → 400 `validation-failed` on the field named by the
@@ -34,7 +34,8 @@ middleware; `express-feature-module` provides `AppError` + `toProblem`.
 - Express 5 forwards rejected promises; handlers have no flow-control `try/catch`. `notFoundHandler` for unknown
   `/api/*`.
 - 5xx logged with the error at `error`, 4xx at `info` without stack. Bodies never include stack, SQL or driver
-  messages. Process-level `unhandledRejection`/`uncaughtException` → `fatal` log + graceful shutdown.
+  messages. Process-level `unhandledRejection`/`uncaughtException` → `fatal` log + graceful shutdown with exit code 1
+  (never 0, so a supervisor sees the crash; ADR 0013).
 - Health endpoints return plain JSON (`{ status }`), not problems, because load balancers only read the status.
 
 ## Alternatives

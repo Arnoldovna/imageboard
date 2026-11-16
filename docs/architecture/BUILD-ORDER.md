@@ -167,20 +167,20 @@ boundaries elements `app`/`scripts`).
 These are the files that more than one later module depends on. They are created **complete** (or as stubs with
 final signatures where marked) before any parallel work starts. Exact types: ADR 0017.
 
-| Area | Files | Notes |
-|---|---|---|
-| Contract | `packages/shared/src/{index,limits,text,ids,pagination,images,comments,session,problem,health,messages}.ts`, `testing/text-vectors.ts` + `__tests__/*.test.ts` | complete, unit-tested (F-D3 Zod side, F-18/F-29 rules, F-44); tolerant response DTOs |
-| DB | `apps/api/src/db/{client,migrate}.ts`, `db/schema/{index,images,comments,text-checks}.ts`, `apps/api/drizzle/0000_init.sql` + `meta/*` | complete (DATA-MODEL.md); review the generated CHECKs |
-| Composition root | `apps/api/src/{server,container,app}.ts`, `config/{app,env}.ts` | final wiring of session, images, comments, upload, all limiters, `overrides.uploadPort` seam |
-| API shared | `shared/errors/*`, `shared/http/{problem,validate,require-json,multipart,health}.ts`, `shared/logging/logger.ts`, `shared/redis/redis.ts`, `shared/security/{session,csrf,fetch-metadata,security}.ts`, `shared/session/actor.ts`, `shared/pagination/cursor.ts`, `shared/storage/object-storage.ts`, `shared/ports/image-upload.ts` | complete with unit tests |
-| API module stubs | `features/upload/index.ts`, `features/images/index.ts`, `features/comments/index.ts` | **stubs**, final signatures (ADR 0017) |
-| API session module | `features/session/**` | complete (needed by every integration test) |
-| API test harness | `apps/api/vitest.integration.config.ts` (`setupFiles`), `test/{global-setup,setup-database,test-db,test-app,images,fakes,http,fixtures}.ts`, `test/{migrations,db-constraints,health,security-headers}.int.test.ts` | complete; conventions §7: template `imageboard_template`, one `t_<random>` clone per file, no `TRUNCATE`, Redis prefix `test-<uuid>` per app (ADR 0015, 0021 §3) |
-| Web shell | `apps/web/index.html`, `src/main.ts`, `src/env.d.ts`, `src/app/**` (App, router, HomePage, NotFoundPage, SiteHeader, SiteFooter, `profile-links.ts` + CSS + router test) | complete; HomePage already wires feature events; the HomePage layout puts the upload panel as a one-row sticky bar (ADR 0012) |
-| Web shared | `src/shared/**` (http client, api-error, session store, announcer with region stack + LiveAnnouncer, focus return, document title, date/bytes format, `ui/*` components incl. `ModalDialog` with its own live region + CSS + tests) | complete |
-| Web feature stubs | `features/{gallery,image-detail,comments,upload}/index.ts` + placeholder components; `features/gallery/gallery.store.ts` with final public API | **stubs** |
-| Styles | `src/styles/{main,tokens,base,utilities}.css` | complete (base incl. focus-visible, `:root:has(dialog[open])` scroll lock) |
-| E2E harness | `e2e/a11y.ts`, `e2e/support/{api,files}.ts`, `e2e/fixtures/*` | complete; `support/api.ts` takes `page.request` |
+| Area               | Files                                                                                                                                                                                                                                                                                                                                | Notes                                                                                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract           | `packages/shared/src/{index,limits,text,ids,pagination,images,comments,session,problem,health,messages}.ts`, `testing/text-vectors.ts` + `__tests__/*.test.ts`                                                                                                                                                                       | complete, unit-tested (F-D3 Zod side, F-18/F-29 rules, F-44); tolerant response DTOs                                                                             |
+| DB                 | `apps/api/src/db/{client,migrate}.ts`, `db/schema/{index,images,comments,text-checks}.ts`, `apps/api/drizzle/0000_init.sql` + `meta/*`                                                                                                                                                                                               | complete (DATA-MODEL.md); review the generated CHECKs                                                                                                            |
+| Composition root   | `apps/api/src/{server,container,app}.ts`, `config/{app,env}.ts`                                                                                                                                                                                                                                                                      | final wiring of session, images, comments, upload, all limiters, `overrides.uploadPort` seam                                                                     |
+| API shared         | `shared/errors/*`, `shared/http/{problem,validate,require-json,multipart,health}.ts`, `shared/logging/logger.ts`, `shared/redis/redis.ts`, `shared/security/{session,csrf,fetch-metadata,security}.ts`, `shared/session/actor.ts`, `shared/pagination/cursor.ts`, `shared/storage/object-storage.ts`, `shared/ports/image-upload.ts` | complete with unit tests                                                                                                                                         |
+| API module stubs   | `features/upload/index.ts`, `features/images/index.ts`, `features/comments/index.ts`                                                                                                                                                                                                                                                 | **stubs**, final signatures (ADR 0017)                                                                                                                           |
+| API session module | `features/session/**`                                                                                                                                                                                                                                                                                                                | complete (needed by every integration test)                                                                                                                      |
+| API test harness   | `apps/api/vitest.integration.config.ts` (`setupFiles`), `test/{global-setup,setup-database,test-db,test-app,images,fakes,http,fixtures}.ts`, `test/{migrations,db-constraints,health,security-headers}.int.test.ts`                                                                                                                  | complete; conventions §7: template `imageboard_template`, one `t_<random>` clone per file, no `TRUNCATE`, Redis prefix `test-<uuid>` per app (ADR 0015, 0021 §3) |
+| Web shell          | `apps/web/index.html`, `src/main.ts`, `src/env.d.ts`, `src/app/**` (App, router, HomePage, NotFoundPage, SiteHeader, SiteFooter, `profile-links.ts` + CSS + router test)                                                                                                                                                             | complete; HomePage already wires feature events; the HomePage layout puts the upload panel as a one-row sticky bar (ADR 0012)                                    |
+| Web shared         | `src/shared/**` (http client, api-error, session store, announcer with region stack + LiveAnnouncer, focus return, document title, date/bytes format, `ui/*` components incl. `ModalDialog` with its own live region + CSS + tests)                                                                                                  | complete                                                                                                                                                         |
+| Web feature stubs  | `features/{gallery,image-detail,comments,upload}/index.ts` + placeholder components; `features/gallery/gallery.store.ts` with final public API                                                                                                                                                                                       | **stubs**                                                                                                                                                        |
+| Styles             | `src/styles/{main,tokens,base,utilities}.css`                                                                                                                                                                                                                                                                                        | complete (base incl. focus-visible, `:root:has(dialog[open])` scroll lock)                                                                                       |
+| E2E harness        | `e2e/a11y.ts`, `e2e/support/{api,files}.ts`, `e2e/fixtures/*`                                                                                                                                                                                                                                                                        | complete; `support/api.ts` takes `page.request`                                                                                                                  |
 
 ### 1b.3 Covers
 
@@ -210,12 +210,12 @@ their own fake upload port.
 
 ### 2.1 Module `upload` (agent A)
 
-| Files (create/edit only these) |
-|---|
-| `apps/api/src/features/upload/index.ts` (replace stub body; keep signature) |
+| Files (create/edit only these)                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/features/upload/index.ts` (replace stub body; keep signature)                                                             |
 | `apps/api/src/features/upload/{upload.config,image-sniffer,image-processor,object-key,upload.service,media.controller,media.routes}.ts` |
-| `apps/api/src/features/upload/__tests__/{image-sniffer,image-processor,object-key,upload.service}.test.ts` |
-| `apps/api/src/features/upload/__tests__/{media.routes,s3-storage}.int.test.ts` |
+| `apps/api/src/features/upload/__tests__/{image-sniffer,image-processor,object-key,upload.service}.test.ts`                              |
+| `apps/api/src/features/upload/__tests__/{media.routes,s3-storage}.int.test.ts`                                                          |
 
 Responsibilities: magic-byte allow-list (APNG → PNG); header inspection (pixels per frame, frame cap); sharp
 pipeline (rotate, resize inside `IMAGE_MAX_EDGE`, same-format re-encode, metadata stripped); WebP preview (ADR
@@ -229,10 +229,10 @@ Covers: F-19, F-20 (server), F-21, F-22, F-23 (storage side), F-36 (media 404), 
 
 ### 2.2 Module `images` (agent B)
 
-| Files (create/edit only these) |
-|---|
-| `apps/api/src/features/images/index.ts` (replace stub body; keep signature) |
-| `apps/api/src/features/images/{images.schema,images.repository,images.service,images.controller,images.routes}.ts` |
+| Files (create/edit only these)                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/features/images/index.ts` (replace stub body; keep signature)                                                        |
+| `apps/api/src/features/images/{images.schema,images.repository,images.service,images.controller,images.routes}.ts`                 |
 | `apps/api/src/features/images/__tests__/{fakes.ts,images.service.test.ts,images.repository.int.test.ts,images.routes.int.test.ts}` |
 
 Responsibilities: list (keyset, clamp, `nextCursor`), get, create (route order per ADR 0017: `requireOwnerSession` →
@@ -246,10 +246,10 @@ B-21, B-22, B-23, B-24, B-25, B-28, B-46 (server), B-63.
 
 ### 2.3 Module `comments` (agent C)
 
-| Files (create/edit only these) |
-|---|
-| `apps/api/src/features/comments/index.ts` (replace stub body; keep signature) |
-| `apps/api/src/features/comments/{comments.schema,comments.repository,comments.service,comments.controller,comments.routes}.ts` |
+| Files (create/edit only these)                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/api/src/features/comments/index.ts` (replace stub body; keep signature)                                                              |
+| `apps/api/src/features/comments/{comments.schema,comments.repository,comments.service,comments.controller,comments.routes}.ts`             |
 | `apps/api/src/features/comments/__tests__/{fakes.ts,comments.service.test.ts,comments.repository.int.test.ts,comments.routes.int.test.ts}` |
 
 Responsibilities: list per image (keyset newest first, 404 for unknown image via injected `imageExists` when the
@@ -290,12 +290,12 @@ utility checker (every BEM class used in markup is defined); visual polish is ph
 
 ### 3.1 Module `gallery` (agent D)
 
-| Files (create/edit only these) |
-|---|
-| `apps/web/src/features/gallery/index.ts` (keep exports) |
-| `apps/web/src/features/gallery/{gallery.api,gallery.store}.ts` |
+| Files (create/edit only these)                                                                  |
+| ----------------------------------------------------------------------------------------------- |
+| `apps/web/src/features/gallery/index.ts` (keep exports)                                         |
+| `apps/web/src/features/gallery/{gallery.api,gallery.store}.ts`                                  |
 | `apps/web/src/features/gallery/components/{GallerySection,ImageTile,GallerySkeleton}.{vue,css}` |
-| `apps/web/src/features/gallery/__tests__/{gallery.store,GallerySection}.test.ts` |
+| `apps/web/src/features/gallery/__tests__/{gallery.store,GallerySection}.test.ts`                |
 
 Responsibilities: first page load with `aria-busy` skeleton; grid of tiles (one `<a>` per tile with
 `aria-labelledby` → the visible title element, preview `<img alt="">` from `previewUrl`, `width`/`height`,
@@ -307,12 +307,12 @@ Covers: F-01, F-03 to F-10 (UI), F-55 (tiles) · B-46, B-47, B-57, B-65, B-68.
 
 ### 3.2 Module `image-detail` (agent E)
 
-| Files (create/edit only these) |
-|---|
-| `apps/web/src/features/image-detail/index.ts` (keep exports) |
-| `apps/web/src/features/image-detail/{image-detail.api,use-image-detail}.ts` |
+| Files (create/edit only these)                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/features/image-detail/index.ts` (keep exports)                                                     |
+| `apps/web/src/features/image-detail/{image-detail.api,use-image-detail}.ts`                                      |
 | `apps/web/src/features/image-detail/components/{ImageDetailDialog,ImageDetailBody,DeleteImageControl}.{vue,css}` |
-| `apps/web/src/features/image-detail/__tests__/{use-image-detail,ImageDetailDialog}.test.ts` |
+| `apps/web/src/features/image-detail/__tests__/{use-image-detail,ImageDetailDialog}.test.ts`                      |
 
 Responsibilities: route component in `ModalDialog`; states loading/ready/notFound/error; abort on id change; large
 image (`url`, `alt` = title), `h2` title, description (preserving line breaks via CSS `white-space: pre-line`, never
@@ -327,12 +327,12 @@ B-49, B-56, B-60, B-69.
 
 ### 3.3 Module `comments` (agent F)
 
-| Files (create/edit only these) |
-|---|
-| `apps/web/src/features/comments/index.ts` (keep exports) |
-| `apps/web/src/features/comments/{comments.api,use-comments}.ts` |
+| Files (create/edit only these)                                                                  |
+| ----------------------------------------------------------------------------------------------- |
+| `apps/web/src/features/comments/index.ts` (keep exports)                                        |
+| `apps/web/src/features/comments/{comments.api,use-comments}.ts`                                 |
 | `apps/web/src/features/comments/components/{CommentsSection,CommentItem,CommentForm}.{vue,css}` |
-| `apps/web/src/features/comments/__tests__/{use-comments,CommentForm}.test.ts` |
+| `apps/web/src/features/comments/__tests__/{use-comments,CommentForm}.test.ts`                   |
 
 Responsibilities: `h3` "Comments"; list as `<ol>` of `<article>`; empty text "No comments yet. Start the
 conversation."; "show older comments" only with `nextCursor`; form Name ("Name (shown publicly)") then Comment,
@@ -343,11 +343,11 @@ Covers: F-26, F-28, F-30, F-31 (UI), F-32 (UI), F-33, F-38 · B-52, B-55, B-66, 
 
 ### 3.4 Module `upload` (agent G)
 
-| Files (create/edit only these) |
-|---|
-| `apps/web/src/features/upload/index.ts` (keep exports) |
-| `apps/web/src/features/upload/{upload.api,use-upload-form,client-file-check}.ts` |
-| `apps/web/src/features/upload/components/{UploadPanel,UploadForm,FilePicker}.{vue,css}` |
+| Files (create/edit only these)                                                                  |
+| ----------------------------------------------------------------------------------------------- |
+| `apps/web/src/features/upload/index.ts` (keep exports)                                          |
+| `apps/web/src/features/upload/{upload.api,use-upload-form,client-file-check}.ts`                |
+| `apps/web/src/features/upload/components/{UploadPanel,UploadForm,FilePicker}.{vue,css}`         |
 | `apps/web/src/features/upload/__tests__/{use-upload-form,client-file-check,UploadForm}.test.ts` |
 
 Responsibilities: one-row sticky bar with `<h2><button aria-expanded aria-controls>Upload an image</button></h2>`
@@ -369,11 +369,11 @@ Gate: quality gate on `feat/frontend-modules`.
 Agents: css-architect, then design-critic. Skills: `maw-design-system` (priority), `modular-css-tailwind4`,
 `design-taste-frontend` (review lens only, per PLAN).
 
-| Step | Mode | Files |
-|---|---|---|
-| 4.1 Foundations | sequential | `src/styles/{tokens,base,utilities,main}.css`, `src/shared/ui/*.css`, `src/shared/a11y/LiveAnnouncer.css`, `src/app/**/*.css` |
-| 4.2 Feature styling | parallel, one agent per feature folder, `.css` files only | `features/gallery/components/*.css` · `features/image-detail/components/*.css` · `features/comments/components/*.css` · `features/upload/components/*.css` |
-| 4.3 Design review | sequential | against the **seeded demo stack** on `http://127.0.0.1:8080`. The **orchestrator** runs `pnpm demo` (= `dev:setup` + `stack:up`) before the review, `pnpm stack:up` again after CSS fixes (rebuilds the web image) and `pnpm stack:down` afterwards. The design-critic only drives a browser against the URL and never runs stack, compose or e2e commands. e2e never writes into this stack. Screenshots 390×844, 768×1024, 1440×900, dark 1440, row hover, focus state, upload bar collapsed and expanded; `references/review-rubric.md` ≥ 24/30, anti-AI gate clean; fixes go back to the owning CSS file |
+| Step                | Mode                                                      | Files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 4.1 Foundations     | sequential                                                | `src/styles/{tokens,base,utilities,main}.css`, `src/shared/ui/*.css`, `src/shared/a11y/LiveAnnouncer.css`, `src/app/**/*.css`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 4.2 Feature styling | parallel, one agent per feature folder, `.css` files only | `features/gallery/components/*.css` · `features/image-detail/components/*.css` · `features/comments/components/*.css` · `features/upload/components/*.css`                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 4.3 Design review   | sequential                                                | against the **seeded demo stack** on `http://127.0.0.1:8080`. The **orchestrator** runs `pnpm demo` (= `dev:setup` + `stack:up`) before the review, `pnpm stack:up` again after CSS fixes (rebuilds the web image) and `pnpm stack:down` afterwards. The design-critic only drives a browser against the URL and never runs stack, compose or e2e commands. e2e never writes into this stack. Screenshots 390×844, 768×1024, 1440×900, dark 1440, row hover, focus state, upload bar collapsed and expanded; `references/review-rubric.md` ≥ 24/30, anti-AI gate clean; fixes go back to the owning CSS file |
 
 Markup changes in 4.2 are limited to adding/removing BEM classes in the matching `.vue` file of the same folder.
 
@@ -397,17 +397,17 @@ recreations race. A spec that exposes an application bug is reported, not worked
 the fix in the owning file between waves and rebuilds with `pnpm e2e:down && pnpm e2e:up`. After the wave the
 orchestrator runs `pnpm e2e:down` and then the full `pnpm verify` once.
 
-| Step | Mode | Files | Covers |
-|---|---|---|---|
-| 5.1 | parallel | `e2e/gallery.spec.ts` | F-01, F-03 to F-10 |
-| 5.1 | parallel | `e2e/detail.spec.ts` | F-11 to F-16, F-53, F-54, F-55 |
-| 5.1 | parallel | `e2e/upload.spec.ts` | F-17, F-20, F-24, F-25, F-38 |
-| 5.1 | parallel | `e2e/comments.spec.ts` | F-26 to F-33 |
-| 5.1 | parallel | `e2e/delete.spec.ts` | F-35 to F-37 |
-| 5.1 | parallel | `e2e/a11y.spec.ts` | F-50, F-51, F-52, F-56 (incl. live region inside the open dialog) |
-| 5.1 | parallel | `e2e/layout.spec.ts` | F-09, F-10, F-57 to F-60 |
-| 5.2 | sequential | gaps found by the traceability check: any `F-xx` or `B-xx` without a passing test or a documented static proof gets one (in the owning module's test file) | all |
-| 5.3 | sequential | `/security-review`, gitleaks, `pnpm audit --prod --audit-level=high` (by hand; not a PR check); fixes in the owning files | B-01 to B-13 re-check |
+| Step | Mode       | Files                                                                                                                                                      | Covers                                                            |
+| ---- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 5.1  | parallel   | `e2e/gallery.spec.ts`                                                                                                                                      | F-01, F-03 to F-10                                                |
+| 5.1  | parallel   | `e2e/detail.spec.ts`                                                                                                                                       | F-11 to F-16, F-53, F-54, F-55                                    |
+| 5.1  | parallel   | `e2e/upload.spec.ts`                                                                                                                                       | F-17, F-20, F-24, F-25, F-38                                      |
+| 5.1  | parallel   | `e2e/comments.spec.ts`                                                                                                                                     | F-26 to F-33                                                      |
+| 5.1  | parallel   | `e2e/delete.spec.ts`                                                                                                                                       | F-35 to F-37                                                      |
+| 5.1  | parallel   | `e2e/a11y.spec.ts`                                                                                                                                         | F-50, F-51, F-52, F-56 (incl. live region inside the open dialog) |
+| 5.1  | parallel   | `e2e/layout.spec.ts`                                                                                                                                       | F-09, F-10, F-57 to F-60                                          |
+| 5.2  | sequential | gaps found by the traceability check: any `F-xx` or `B-xx` without a passing test or a documented static proof gets one (in the owning module's test file) | all                                                               |
+| 5.3  | sequential | `/security-review`, gitleaks, `pnpm audit --prod --audit-level=high` (by hand; not a PR check); fixes in the owning files                                  | B-01 to B-13 re-check                                             |
 
 Data rules for every spec: create own data through `e2e/support/api.ts` with `page.request` (owned by the page's
 session) or a separate request context ("foreign"); unique titles; never count- or seed-based (ADR 0015).

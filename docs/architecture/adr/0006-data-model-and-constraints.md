@@ -27,7 +27,7 @@ Final schema in [DATA-MODEL.md](../DATA-MODEL.md). Key points:
   syntax `\uXXXX` means the same in JS and in Postgres ARE). No `[[:cntrl:]]` and no `btrim`, because their meaning
   depends on the database locale/libc and differs from JS `trim()`:
   - `WHITESPACE` = JS `String.prototype.trim` set: `\u0009-\u000D \u0020 \u00A0 \u1680 \u2000-\u200A \u2028
-    \u2029 \u202F \u205F \u3000 \uFEFF`.
+\u2029 \u202F \u205F \u3000 \uFEFF`.
   - `FORBIDDEN_SINGLE_LINE` (`author_name`, `title`): C0 `\u0001-\u001F`, DEL + C1 `\u007F-\u009F`, `\u2028`, `\u2029`,
     bidi embeddings/overrides/isolates `\u202A-\u202E`, `\u2066-\u2069`.
   - `FORBIDDEN_MULTI_LINE` (`description`, `body`): C0 except `\n`, DEL + C1, `\u2028`, `\u2029`. `\r` is forbidden

@@ -1,0 +1,31 @@
+# Override for the isolated e2e project `imageboard-e2e` (scripts/run-e2e.mjs, ADR 0015, conventions §6):
+#   docker compose -p imageboard-e2e -f docker-compose.yml -f docker-compose.e2e.yml --profile app up --build --wait
+# No published infra ports, data on tmpfs, web on 127.0.0.1:E2E_PORT (8181), every rate limit raised.
+# Production limits are proven by integration tests, never by e2e. `!reset` / `!override` need Compose >= 2.24.4.
+services:
+  postgres:
+    ports: !reset []
+    volumes: !reset []
+    tmpfs: ['/var/lib/postgresql']
+
+  redis:
+    ports: !reset []
+
+  minio:
+    ports: !reset []
+    volumes: !reset []
+    tmpfs: ['/data']
+
+  api:
+    environment:
+      RATE_LIMIT_GLOBAL: '100000'
+      RATE_LIMIT_MEDIA: '100000'
+      RATE_LIMIT_IDENTITIES: '100000'
+      RATE_LIMIT_UPLOADS: '100000'
+      RATE_LIMIT_UPLOADS_GLOBAL_DAY: '100000'
+      RATE_LIMIT_COMMENTS: '100000'
+      RATE_LIMIT_DELETES: '100000'
+
+  # Compose concatenates `ports` across files; !override replaces 8080 so e2e can run next to `pnpm demo`.
+  web:
+    ports: !override ['127.0.0.1:${E2E_PORT:-8181}:8080']

@@ -66,7 +66,7 @@ written. Each fix is listed below. CI cost rules are in ADR 0020.
      writes `test-results/compose.log` and always runs `down -v`.
 5. **The seed guard lives in the entry point, and the scripts exist from 1a.**
    - `apps/api` script `db:seed` = `SEED_ALLOW=true tsx --conditions=development --env-file-if-exists=../../.env
-     src/scripts/seed-cli.ts` from phase 1a (the stub refuses without it, so `dev:setup` would fail otherwise).
+src/scripts/seed-cli.ts` from phase 1a (the stub refuses without it, so `dev:setup` would fail otherwise).
    - `seed-cli.ts` checks `SEED_ALLOW === 'true'` and never `NODE_ENV`. `runSeed()` has no guard, because tests call
      it directly with their own database and fake storage.
    - `--check` is read-only and needs no `SEED_ALLOW`. It runs as the `db:seed:check` script (same `tsx` flags; a
@@ -78,7 +78,7 @@ written. Each fix is listed below. CI cost rules are in ADR 0020.
 6. **`db:generate` builds the contract first.** The Drizzle schema imports `@app/shared` (CHECK constants).
    drizzle-kit loads schema files with its own loader, which does not apply the `development` export condition, so
    the package must resolve to `dist/`. `apps/api` `db:generate` = `pnpm --filter @app/shared build && drizzle-kit
-   generate`. The CI drift step calls that script (`pnpm --filter @app/api db:generate`). Phase 1b verifies this. If
+generate`. The CI drift step calls that script (`pnpm --filter @app/api db:generate`). Phase 1b verifies this. If
    drizzle-kit is shown to resolve the source, the build step may be dropped, with a note in this ADR.
 7. **Cookie names are app-scoped in both modes.**
    - Session: `__Host-imageboard.sid` (secure) or `imageboard.sid` (local http).
