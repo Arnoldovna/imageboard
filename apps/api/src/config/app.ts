@@ -35,5 +35,18 @@ export const READINESS_MS = {
   checkTimeoutMs: 2_000,
 } as const;
 
+/**
+ * S3 client limits per attempt (the SDK makes up to 3 attempts). `connect`: TCP/TLS connect. `request`: until the
+ * response headers arrive, a PutObject body upload (≤ 5 MiB) included. Without `request`, an endpoint that accepts the
+ * connection and then stalls would hold an upload or delete request open forever. With it, even the object cleanup of
+ * a delete (3 attempts per key, ADR 0008) ends in under a minute against a stalled endpoint, inside nginx's default
+ * 60 s proxy timeout. A streamed media body is not limited by it: the timer stops at the response headers, and a
+ * client that goes away ends the stream.
+ */
+export const S3_TIMEOUTS_MS = {
+  connect: 3_000,
+  request: 5_000,
+} as const;
+
 /** Upper bound for closing connections and disposing clients once shutdown starts (after the drain delay). */
 export const SHUTDOWN_FORCE_EXIT_MS = 10_000;

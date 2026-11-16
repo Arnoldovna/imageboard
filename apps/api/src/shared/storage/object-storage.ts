@@ -12,7 +12,7 @@ import {
   S3ServiceException,
 } from '@aws-sdk/client-s3';
 
-import { READINESS_MS } from '../../config/app.js';
+import { READINESS_MS, S3_TIMEOUTS_MS } from '../../config/app.js';
 import type { Env } from '../../config/env.js';
 
 export class ObjectNotFoundError extends Error {
@@ -136,8 +136,14 @@ export function createS3ObjectStorage(send: S3Send, bucket: string): ObjectStora
   };
 }
 
-/** The S3 adapter: the port plus `destroy()` for the composition root (closes the client's sockets on shutdown). */
-export function createS3Storage(env: S3Env): ObjectStorage & { destroy(): void } {
+/**
+ * The S3 adapter: the port plus `destroy()` for the composition root (closes the client's sockets on shutdown).
+ * `timeouts` is a seam for tests; the app always uses S3_TIMEOUTS_MS.
+ */
+export function createS3Storage(
+  env: S3Env,
+  timeouts: { connect: number; request: number } = S3_TIMEOUTS_MS,
+): ObjectStorage & { destroy(): void } {
   const client = new S3Client({
     region: env.S3_REGION,
     ...(env.S3_ENDPOINT ? { endpoint: env.S3_ENDPOINT } : {}),
@@ -146,8 +152,14 @@ export function createS3Storage(env: S3Env): ObjectStorage & { destroy(): void }
     // Only send/require checksums when the operation demands it; keeps S3-compatible servers working.
     requestChecksumCalculation: 'WHEN_REQUIRED',
     responseChecksumValidation: 'WHEN_REQUIRED',
-    // The SDK default is no connect timeout: an unreachable endpoint would hold a request until the OS gives up.
-    requestHandler: { connectionTimeout: 3_000 },
+    // The SDK defaults are no timeouts at all: an unreachable endpoint would hold a request until the OS gives up,
+    // and one that stalls after connecting would hold it forever. `throwOnRequestTimeout` turns the request timeout
+    // into a (retryable) TimeoutError; without it the SDK only logs a warning and keeps waiting.
+    requestHandler: {
+      connectionTimeout: timeouts.connect,
+      requestTimeout: timeouts.request,
+      throwOnRequestTimeout: true,
+    },
   });
   // S3Client.send is generic per command; narrowing each command lets TypeScript pick the matching overload.
   const send: S3Send = (command, options) => {

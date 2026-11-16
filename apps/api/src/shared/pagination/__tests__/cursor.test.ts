@@ -12,6 +12,12 @@ describe('keyset cursor (ADR 0007)', () => {
     expect(decodeCursor(encodeCursor(position))).toEqual(position);
   });
 
+  it('accepts the earliest year Postgres can compare (0001)', () => {
+    const position = { createdAt: new Date('0001-01-01T00:00:00.000Z'), id: 1 };
+
+    expect(decodeCursor(encodeCursor(position))).toEqual(position);
+  });
+
   it('is short enough for the 200-character limit even at the largest id', () => {
     expect(encodeCursor({ createdAt: new Date('2026-10-06T15:31:00.123Z'), id: 2_147_483_647 }).length).toBeLessThan(
       200,
@@ -28,6 +34,8 @@ describe('keyset cursor (ADR 0007)', () => {
     ['fractional id', toBase64Url('{"t":"2026-10-06T15:31:00.000Z","id":1.5}')],
     ['timestamp without milliseconds', toBase64Url('{"t":"2026-10-06T15:31:00Z","id":1}')],
     ['not a timestamp', toBase64Url('{"t":"yesterday","id":1}')],
+    // Valid ISO 8601, but Postgres has no year 0 and would fail the query with 22008 (a 500).
+    ['year 0000', toBase64Url('{"t":"0000-01-01T00:00:00.000Z","id":1}')],
     ['extra keys', toBase64Url('{"t":"2026-10-06T15:31:00.000Z","id":1,"x":1}')],
     ['SQL-looking payload', toBase64Url(`{"t":"2026-10-06T15:31:00.000Z'; drop table images;--","id":1}`)],
   ])('F-44 / B-13: %s is 400 invalid-cursor, never a 500', (_case, raw) => {

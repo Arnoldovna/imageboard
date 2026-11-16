@@ -23,10 +23,11 @@ project-specific content and bans lorem ipsum, fake names and generic stock or A
 - `runSeed()` builds the upload module like the composition root and calls `port.ingest({ buffer, size },
 { objectKey })` with the fixed key from `manifest.json` (same sniff, sharp pipeline and preview as uploads, ADR 0017
   and 0018), then inserts the row and comments with fixed dates and a non-session owner id; rows whose key already
-  exists are skipped (idempotent). Runs only with an explicit `SEED_ALLOW=true`, which the `db:seed` script sets
+  exists are skipped (idempotent), unless their original or preview is missing in storage: then the file is ingested
+  again under the same key and the row stays as it is, so a re-run repairs a reset storage volume. Runs only with an explicit `SEED_ALLOW=true`, which the `db:seed` script sets
   (cross-project seed guard, `project-scaffold/references/conventions.md` §8). The guard lives in the entry point
-  `seed-cli.ts`, never in `runSeed()` (tests call it directly), and never looks at `NODE_ENV`. The seed only inserts
-  and skips, so there is no destructive reset to refuse. `SEED_ALLOW` is not an `.env` key.
+  `seed-cli.ts`, never in `runSeed()` (tests call it directly), and never looks at `NODE_ENV`. The seed only inserts,
+  restores missing seed objects and skips, so there is no destructive reset to refuse. `SEED_ALLOW` is not an `.env` key.
 - Scripts in `apps/api/package.json`, all with `tsx --conditions=development --env-file-if-exists=../../.env`:
   - `db:seed` (`SEED_ALLOW=true`, from phase 1a, where `seed-cli.ts` is a stub);
   - `db:seed:check` (`seed-cli.ts --check`: read-only, so no `SEED_ALLOW`; it verifies 16 rows, 60 comments and
@@ -49,7 +50,8 @@ project-specific content and bans lorem ipsum, fake names and generic stock or A
 
 - About 4 MB of JPEGs in the repo (acceptable; images never change).
 - `seed.int.test.ts` runs `runSeed` twice with fake storage in its own database and asserts 16 images, 60 comments
-  and 32 objects (originals + previews). The CI job `dev-setup-smoke` runs the real `pnpm dev:setup` (twice) against
+  and 32 objects (originals + previews), and that a run after deleting objects of seeded rows stores them again
+  without touching a row. The CI job `dev-setup-smoke` runs the real `pnpm dev:setup` (twice) against
   compose MinIO and checks the same numbers with `pnpm --filter @app/api db:seed:check` (OVERVIEW §16), because the seed powers the
   portfolio demo and must work outside the fake.
 - README screenshots are reproducible (fixed dates and content).

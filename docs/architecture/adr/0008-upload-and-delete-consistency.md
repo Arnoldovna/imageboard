@@ -25,7 +25,7 @@ objects (B-07), and deletes rows in two unawaited, non-transactional steps (B-22
    `ON DELETE CASCADE`.
 2. Zero rows → `exists(id)` → `404 not-found` or `403 not-owner`.
 3. After the statement has committed: `upload.discard(objectKey)` deletes original and preview, each with up to 3
-   attempts (100 ms, 400 ms, 1.6 s backoff). A final failure logs `error` `{ objectKey, failedKeys, attempts }` and
+   attempts (waits of 100 ms and 400 ms between them). A final failure logs `error` `{ objectKey, failedKeys, attempts }` and
    **does not** fail the request: the image is already gone from the product; the orphan is an ops concern.
 4. `204`.
 
@@ -47,3 +47,7 @@ objects (B-07), and deletes rows in two unawaited, non-transactional steps (B-22
 - Integration tests prove: after delete, comments count 0, `GET` 404, media 404 for original and preview, fake
   storage empty.
 - The media route may briefly serve a deleted image during the retry window (≤ 2 s); acceptable.
+- Every S3 attempt is bounded (`S3_TIMEOUTS_MS` in `config/app.ts`: connect 3 s, request 5 s until the response
+  headers; the SDK makes up to 3 attempts). So a storage endpoint that accepts connections and then stalls can delay
+  an upload or the cleanup of a delete, but never hold the request open indefinitely: a delete still answers `204`
+  in under a minute, inside nginx's default 60 s proxy timeout. A streamed media body is not cut by these limits.

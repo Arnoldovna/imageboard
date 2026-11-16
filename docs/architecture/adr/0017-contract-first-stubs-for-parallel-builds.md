@@ -150,6 +150,8 @@ export interface UploadModule {
   mediaRouter: Router;
 }
 export function createUploadModule(deps: UploadModuleDeps): UploadModule;
+/** `images/<uuid>.<ext>` → `previews/<uuid>.webp` (ADR 0018). Pure; re-exported for the seed scripts. */
+export function previewKeyOf(objectKey: string): string;
 
 // features/images/index.ts
 export interface ImagesModuleDeps {

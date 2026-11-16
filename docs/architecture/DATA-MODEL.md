@@ -255,7 +255,9 @@ CREATE INDEX "comments_image_id_created_at_id_idx" ON "comments" USING btree ("i
 | `comments.findById(id)` / `deleteOwned(id, ownerId)` | as for images                                                                                                                                | PK                                    |
 
 The cursor timestamp is always passed as an ISO string with an explicit `::timestamptz` cast, never as a raw
-`Date` parameter (no dependency on driver time-zone conversion).
+`Date` parameter (no dependency on driver time-zone conversion). Both repositories build the row comparison with the
+one helper `olderThan(createdAt, id, after)` in `src/db/keyset.ts`. `decodeCursor` refuses a timestamp in year 0000
+(`400 invalid-cursor`): it is valid ISO 8601, but Postgres has no year 0 and would fail the query with `22008`.
 
 `deleteOwned` returning zero rows triggers `findById`/`exists` to decide 404 vs 403. Between the two statements the
 row could disappear (concurrent delete by the owner); then the answer is 404, which is correct.
@@ -279,8 +281,8 @@ the template, which is already migrated), migrates it, migrates again, and asser
 ## 6. Seed plan
 
 `pnpm db:seed` → `SEED_ALLOW=true tsx --conditions=development --env-file-if-exists=../../.env src/scripts/seed-cli.ts`
-→ `runSeed({ db, upload, logger })` from `src/scripts/seed.ts`,
-where `upload` is the real `ImageUploadPort` built by `createUploadModule` on the configured storage (the function is
+→ `runSeed({ db, upload, storage, logger })` from `src/scripts/seed.ts`,
+where `upload` is the real `ImageUploadPort` built by `createUploadModule` on the configured `storage` (the function is
 exported so `test/seed.int.test.ts` can run it twice against its own Testcontainers database and a fake storage).
 `pnpm --filter @app/api db:seed:check` (`seed-cli.ts --check`, same `tsx` flags, no `SEED_ALLOW`) only verifies
 (16 seed rows, 60 comments, both objects per row reachable through `storage.get`) and exits non-zero otherwise. CI's
@@ -294,9 +296,13 @@ exported so `test/seed.int.test.ts` can run it twice against its own Testcontain
   and that `--check` needs no switch. `NODE_ENV` is never consulted. `SEED_ALLOW` is not an `.env` key. The seed never
   deletes or resets anything. It needs no secrets beyond the normal `.env` (no demo password, no accounts).
 - **Idempotent**: each seed image has a fixed object key (UUID v4 generated once and committed in
-  `manifest.json`). For each entry: if a row with that `object_key` exists, skip it entirely; otherwise process the
-  file through the **same pipeline as uploads** (`upload.ingest(file, { objectKey })`, which also stores the preview,
-  ADR 0018), insert the row, insert its comments. Running twice yields the same rows and objects.
+  `manifest.json`). For each entry: if a row with that `object_key` exists and both its objects are in storage, skip
+  it (two reads, no write); if the row exists but its original or preview is missing (for example after the MinIO
+  volume was reset while the Postgres volume was kept), ingest the file again with the same key and leave the row and
+  its comments untouched; otherwise process the file through the **same pipeline as uploads**
+  (`upload.ingest(file, { objectKey })`, which also stores the preview, ADR 0018), insert the row, insert its
+  comments. Running twice yields the same rows and objects, and a re-run repairs what `db:seed:check` reports as a
+  missing object.
 - Owner of all seed rows: constant `SEED_OWNER_ID = '5eed0000-0000-4000-8000-000000000001'`, which no session can
   ever hold, so visitors cannot delete demo content.
 - Fixed `created_at` values (not "now minus x") so README screenshots are reproducible. Dates span
@@ -347,24 +353,24 @@ Display names are free text in this product, so seeds use the kind of names peop
 
 Dates are `created_at` in UTC. "Comments" lists author → body, oldest first (the API shows newest first).
 
-| #   | Slug / subject brief                                                 | Title                                 | Author             | Description                                                                                   | Date (UTC)        | Comments                                                                                                                                                    |
-| --- | -------------------------------------------------------------------- | ------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `fog-over-the-pines` — mist in a conifer forest                      | Fog over the pines                    | Marit              | Took the early bus out of town just for this. Twenty minutes later the sun burned it all off. | 21 Sep 2026 06:42 | Henrik → "Worth the early bus." · Bea → "This is exactly what I needed on a Monday."                                                                        |
-| 2   | `last-tram-gone` — empty street or square at night with lights       | Last tram already gone                | Jonas from Leipzig | Walking home it is, then. The city is very quiet after one.                                   | 24 Sep 2026 23:58 | Noor → "The light on the wet road is lovely." · Pavel → "Been there. Many times." · Jonas from Leipzig → "Forty minutes on foot, for the record."           |
-| 3   | `second-coffee` — a cup or mug on a table                            | Second coffee, first idea             | wen                | Desk by the window, no meetings until eleven.                                                 | 27 Sep 2026 09:15 | (none: shows the empty comments state)                                                                                                                      |
-| 4   | `dog-refuses-to-pose` — a dog                                        | Bruno refuses to pose                 | Anouk              | This was attempt number nine. He knew exactly what I wanted and did the opposite.             | 30 Sep 2026 17:20 | Lucía → "Attempt nine is the winner though." · Kofi → "Give Bruno a treat from me." · Anouk → "He got two." · Sanne → "That look."                          |
-| 5   | `lake-twice` — still mountain lake with reflection                   | The ridge, twice                      | Henrik             | No wind at all for about ten minutes, so the lake did the rest.                               | 3 Oct 2026 07:05  | Marit → "Where is this? I want to go." · Henrik → "Two hours by train, then a long walk uphill."                                                            |
-| 6   | `north-sea-october` — sea, beach or coastline                        | North Sea in October                  | Sanne              | Cold enough for a hat, warm enough to sit on the dunes for an hour.                           | 6 Oct 2026 15:31  | **25 comments** (see §6.5; demonstrates "Show older comments")                                                                                              |
-| 7   | `long-way-round` — bicycle, road or path                             | Commute, the long way round           | Kofi               | Added four kilometres to the ride home because the evening was too good to waste.             | 9 Oct 2026 18:47  | Dariusz → "Best kind of detour." · Yuki → "Is that the canal path?" · Kofi → "Yes, the stretch after the lock."                                             |
-| 8   | `balconies` — building facade, windows, architecture                 | Every balcony different               | Lucía              | Same building, forty balconies, forty ideas about plants.                                     | 12 Oct 2026 11:02 | Ines K. → "Third row, second from the left. That one."                                                                                                      |
-| 9   | `before-the-storm` — field, meadow or open landscape under a big sky | Before the storm                      | Dariusz            | It started raining about five minutes after this. I was not dressed for it.                   | 15 Oct 2026 16:10 | ole_b → "The colour of that sky." · Dariusz → "Soaked to the bone, still worth it."                                                                         |
-| 10  | `library-card` — books, shelves or a reading place                   | Library card renewed after six years  | Ines K.            | They still had my old address. Starting with something short.                                 | 18 Oct 2026 13:44 | Bea → "What did you pick?" · Ines K. → "A slim book of short stories, due in three weeks." · wen → "Libraries are the best."                                |
-| 11  | `bridge-in-the-rain` — bridge, river or rain                         | Bridge in the rain                    | Pavel              | Umbrella in one hand, phone in the other, no regrets.                                         | 22 Oct 2026 08:26 | Anouk → "Moody in the best way."                                                                                                                            |
-| 12  | `first-snow` — snow on mountains or trees                            | First snow on the ridge               | Yuki               | Overnight, without any warning. The valley is still green.                                    | 26 Oct 2026 07:58 | Henrik → "Early this year." · Marit → "Skis are coming out of the cellar." · Yuki → "Not yet, give it a month."                                             |
-| 13  | `borrowed-view` — flowers or plants                                  | The neighbour's garden, borrowed view | Bea                | I have no garden, but my kitchen window looks onto this.                                      | 30 Oct 2026 10:12 | Lucía → "Best kind of garden: someone else waters it." · Bea → "Exactly my philosophy."                                                                     |
-| 14  | `low-tide` — rocks, shore or water texture                           | Rocks at low tide                     | ole_b              | The water came back faster than I expected. Wet shoes all the way home.                       | 3 Nov 2026 14:39  | Sanne → "Classic." · Noor → "Lovely textures."                                                                                                              |
-| 15  | `no-other-cars` — road through a landscape                           | The road with no other cars           | Noor               | Saw maybe three cars in an hour. Stopped in the middle of the road for this one.              | 7 Nov 2026 12:05  | Tomás R. → "Careful out there." · Noor → "Checked twice, promise." · Kofi → "Where does it go?" · Noor → "To a very small village with a very good bakery." |
-| 16  | `fifth-floor` — rooftops, skyline or view from above                 | Rooftops from the fifth floor         | Tomás R.           | New flat, no lift, but this view makes the stairs bearable.                                   | 12 Nov 2026 19:23 | Jonas from Leipzig → "Congratulations on the new place." · Pavel → "Five floors builds character." · Tomás R. → "Thank you both. Ask me again in winter."   |
+| #   | Slug / subject brief                                                     | Title                                 | Author             | Description                                                                                               | Date (UTC)        | Comments                                                                                                                                                    |
+| --- | ------------------------------------------------------------------------ | ------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `fog-over-the-pines` — mist in a conifer forest                          | Fog over the pines                    | Marit              | Took the early bus out of town just for this. Twenty minutes later the sun burned it all off.             | 21 Sep 2026 06:42 | Henrik → "Worth the early bus." · Bea → "This is exactly what I needed on a Monday."                                                                        |
+| 2   | `last-train-gone` — empty street, station or square at night with lights | Last train already gone               | Jonas from Leipzig | Walking home it is, then. The station is very quiet after one.                                            | 24 Sep 2026 23:58 | Noor → "The fog under those lamps is lovely." · Pavel → "Been there. Many times." · Jonas from Leipzig → "Forty minutes on foot, for the record."           |
+| 3   | `second-coffee` — a cup or mug on a table                                | Second coffee, first idea             | wen                | Corner table at the café, no meetings until eleven.                                                       | 27 Sep 2026 09:15 | (none: shows the empty comments state)                                                                                                                      |
+| 4   | `dog-refuses-to-pose` — a dog                                            | Bruno refuses to pose                 | Anouk              | This was attempt number nine. He knew exactly what I wanted and did the opposite.                         | 30 Sep 2026 17:20 | Lucía → "Attempt nine is the winner though." · Kofi → "Give Bruno a treat from me." · Anouk → "He got two." · Sanne → "That look."                          |
+| 5   | `lake-twice` — still mountain lake with reflection                       | The ridge, twice                      | Henrik             | No wind at all for about ten minutes, so the lake did the rest.                                           | 3 Oct 2026 07:05  | Marit → "Where is this? I want to go." · Henrik → "Two hours by train, then a long walk uphill."                                                            |
+| 6   | `north-sea-october` — sea, beach or coastline                            | North Sea in October                  | Sanne              | Cold enough for a hat, warm enough to sit on the dunes for an hour.                                       | 6 Oct 2026 15:31  | **25 comments** (see §6.5; demonstrates "Show older comments")                                                                                              |
+| 7   | `long-way-round` — bicycle, road or path                                 | Commute, the long way round           | Kofi               | Added four kilometres to the ride home because the evening was too good to waste.                         | 9 Oct 2026 18:47  | Dariusz → "Best kind of detour." · Yuki → "Is that the river path?" · Kofi → "Yes, the stretch after the old mill."                                         |
+| 8   | `balconies` — building facade, windows, architecture                     | Balconies all the way down            | Lucía              | Leaned out of a friend's window for this. Half the town was walking below.                                | 12 Oct 2026 11:02 | Ines K. → "Third row, second from the left. That one."                                                                                                      |
+| 9   | `before-the-storm` — field, meadow or open landscape under a big sky     | Before the storm                      | Dariusz            | It started raining about five minutes after this. I was not dressed for it.                               | 15 Oct 2026 16:10 | ole_b → "The colour of that sky." · Dariusz → "Soaked to the bone, still worth it."                                                                         |
+| 10  | `library-card` — books, shelves or a reading place                       | Library card renewed after six years  | Ines K.            | They still had my old address. Starting with something short.                                             | 18 Oct 2026 13:44 | Bea → "What did you pick?" · Ines K. → "Something with very small print, due in three weeks." · wen → "Libraries are the best."                             |
+| 11  | `bridge-in-the-fog` — bridge, river, rain or fog                         | Bridge in the fog                     | Pavel              | Could not see the other bank this morning. One runner, otherwise just me.                                 | 22 Oct 2026 08:26 | Anouk → "Moody in the best way."                                                                                                                            |
+| 12  | `first-snow` — snow on mountains or trees                                | First snow on the peaks               | Yuki               | Overnight, without any warning. Down in the valley it was still raining.                                  | 26 Oct 2026 07:58 | Henrik → "Early this year." · Marit → "Skis are coming out of the cellar." · Yuki → "Not yet, give it a month."                                             |
+| 13  | `borrowed-view` — flowers or plants                                      | The neighbour's garden, borrowed view | Bea                | I have no garden, but my kitchen window looks onto this. Found the photo from April and it cheered me up. | 30 Oct 2026 10:12 | Lucía → "Best kind of garden: someone else waters it." · Bea → "Exactly my philosophy."                                                                     |
+| 14  | `low-tide` — rocks, shore or water texture                               | Rocks at low tide                     | ole_b              | The water came back faster than I expected. Wet shoes all the way home.                                   | 3 Nov 2026 14:39  | Sanne → "Classic." · Noor → "Lovely textures."                                                                                                              |
+| 15  | `no-other-cars` — road through a landscape                               | The road with no other cars           | Noor               | Saw maybe three cars in an hour. Stopped in the middle of the road for this one.                          | 7 Nov 2026 12:05  | Tomás R. → "Careful out there." · Noor → "Checked twice, promise." · Kofi → "Where does it go?" · Noor → "To a very small village with a very good bakery." |
+| 16  | `fifth-floor` — rooftops, skyline or view from above                     | Rooftops from the fifth floor         | Tomás R.           | New flat, no lift, but this view makes the stairs bearable.                                               | 12 Nov 2026 19:23 | Jonas from Leipzig → "Congratulations on the new place." · Pavel → "Five floors builds character." · Tomás R. → "Thank you both. Ask me again in winter."   |
 
 That is 16 images, 35 comments in the table plus 25 on image 6 = **60 comments**. Image 3 has none (empty state).
 
@@ -373,7 +379,7 @@ That is 16 images, 35 comments in the table plus 25 on image 6 = **60 comments**
 Twenty-five comments, so the first page (20) shows a "Show older comments" button. Times start at
 6 Oct 2026 15:52 and step forward irregularly (8 to 190 minutes) over three days.
 
-1. Marit → "That sky is doing a lot of work."
+1. Marit → "The light on that grass is doing a lot of work."
 2. Kofi → "Which beach is this?"
 3. Sanne → "A long way past the last car park. Worth the walk."
 4. Kofi → "Noted for next year."
@@ -386,9 +392,9 @@ Twenty-five comments, so the first page (20) shows a "Show older comments" butto
 11. Noor → "This makes me want to book a train ticket right now."
 12. wen → "Do it."
 13. Ines K. → "The grass on the dunes looks almost silver."
-14. Yuki → "Is that a ship on the horizon?"
-15. Sanne → "Container ship, there is always one."
-16. ole_b → "Good composition, the horizon is right where it should be."
+14. Yuki → "Are those waves as cold as they look?"
+15. Sanne → "Colder. I only went in up to my ankles."
+16. ole_b → "Good composition, the path leads you straight into the waves."
 17. Anouk → "Bruno would lose his mind on that beach."
 18. Sanne → "Bring him, there were dogs everywhere."
 19. Tomás R. → "Saving this as my wallpaper, hope that is fine."

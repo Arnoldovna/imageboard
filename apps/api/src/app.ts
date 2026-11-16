@@ -3,7 +3,7 @@ import express, { type Express, type RequestHandler } from 'express';
 import type { Logger } from 'pino';
 
 import { RATE_LIMIT_WINDOWS_MS } from './config/app.js';
-import { cookiesAreSecure, type Env } from './config/env.js';
+import { cookiesAreSecure, type Env, uploadConfig } from './config/env.js';
 import type { Database } from './db/client.js';
 import { createCommentsModule } from './features/comments/index.js';
 import { createImagesModule } from './features/images/index.js';
@@ -63,12 +63,7 @@ export function createApp(deps: AppDeps): Express {
   const upload = createUploadModule({
     storage: deps.storage,
     logger,
-    config: {
-      maxPixels: env.UPLOAD_MAX_PIXELS,
-      maxFrames: env.UPLOAD_MAX_FRAMES,
-      maxEdge: env.IMAGE_MAX_EDGE,
-      mediaPublicBaseUrl: env.MEDIA_PUBLIC_BASE_URL,
-    },
+    config: uploadConfig(env),
     mediaLimiter: limiters.media,
   });
   const images = createImagesModule({

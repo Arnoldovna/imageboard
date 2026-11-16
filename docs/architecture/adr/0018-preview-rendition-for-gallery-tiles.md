@@ -19,8 +19,8 @@ explicitly allows an ADR to add thumbnails if performance requires them.
   at 3×.
 - **Key is derived, not stored**: `images/<uuid>.<ext>` → `previews/<uuid>.webp`. No schema change; the DB still
   stores only `object_key` (B-35). `ImageUploadPort.previewUrl(objectKey)` builds the URL (ADR 0017).
-- Order inside `ingest`: put original → put preview; if the preview put fails, the original is discarded before
-  rethrowing, so a failed ingest leaves nothing behind (ADR 0008 unchanged in spirit). `discard(objectKey)` deletes
+- Order inside `ingest`: put original → put preview; if either put fails, both keys are discarded (a timed-out put may
+  still have stored its object) before rethrowing, so a failed ingest leaves nothing behind (ADR 0008 unchanged in spirit). `discard(objectKey)` deletes
   both keys (each with the retry policy) and logs `{ objectKeys, attempts }` on final failure.
 - `ImageDto` gains `previewUrl`. Gallery tiles use `previewUrl`; the detail dialog uses `url` (the original,
   animated if the original is animated). Tiles keep `width`/`height` of the original as attributes (same aspect

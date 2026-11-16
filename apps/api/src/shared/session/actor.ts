@@ -38,6 +38,15 @@ export function actorOf(req: Request): Actor {
   return { ownerId: req.session.ownerId ?? null };
 }
 
+/**
+ * The identity a mutation acts for, or 403 `session-required`. Routes already guard with `requireOwnerSession`; the
+ * services call this as well, so the rule holds for every caller of a service, not only for its routes.
+ */
+export function requireOwnerId(actor: Actor): string {
+  if (actor.ownerId === null) throw new ForbiddenError('session-required');
+  return actor.ownerId;
+}
+
 /** Guards mutations: 403 `session-required` when the visitor has no anonymous identity (OVERVIEW §11). */
 export const requireOwnerSession: RequestHandler = (req, _res, next) => {
   if (actorOf(req).ownerId === null) {

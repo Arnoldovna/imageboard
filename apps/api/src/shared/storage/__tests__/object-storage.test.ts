@@ -1,3 +1,5 @@
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo, Socket } from 'node:net';
 import { Readable } from 'node:stream';
 import { text } from 'node:stream/consumers';
 
@@ -9,10 +11,16 @@ import {
   PutObjectCommand,
   S3ServiceException,
 } from '@aws-sdk/client-s3';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createFakeStorage } from '../../../../test/fakes.js';
-import { createS3ObjectStorage, ObjectNotFoundError, type ObjectStorage, type S3Send } from '../object-storage.js';
+import {
+  createS3ObjectStorage,
+  createS3Storage,
+  ObjectNotFoundError,
+  type ObjectStorage,
+  type S3Send,
+} from '../object-storage.js';
 
 const lastModified = new Date('2026-11-12T19:23:00.000Z');
 
@@ -138,6 +146,62 @@ describe('S3 adapter (createS3ObjectStorage)', () => {
     await expect(createS3ObjectStorage(() => Promise.reject(new Error('down')), 'bucket').isReady()).resolves.toBe(
       false,
     );
+  });
+});
+
+describe('S3 client timeouts (createS3Storage)', () => {
+  let server: Server;
+  let endpoint: string;
+  const sockets = new Set<Socket>();
+
+  beforeAll(async () => {
+    // Accepts every connection and reads every request, but never answers: a storage endpoint that stalls.
+    server = createServer((req) => {
+      req.resume();
+    });
+    server.on('connection', (socket) => {
+      sockets.add(socket);
+      socket.on('close', () => sockets.delete(socket));
+    });
+    await new Promise<void>((resolve) => {
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    endpoint = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
+  });
+
+  afterAll(async () => {
+    for (const socket of sockets) socket.destroy();
+    await new Promise<void>((resolve) => {
+      server.close(() => {
+        resolve();
+      });
+    });
+  });
+
+  function stalledStorage() {
+    return createS3Storage(
+      {
+        S3_ENDPOINT: endpoint,
+        S3_REGION: 'eu-central-1',
+        S3_BUCKET: 'bucket',
+        S3_ACCESS_KEY_ID: 'test',
+        S3_SECRET_ACCESS_KEY: 'test-secret',
+        S3_FORCE_PATH_STYLE: true,
+      },
+      { connect: 1_000, request: 100 },
+    );
+  }
+
+  it('a put or delete against a stalled endpoint fails with a TimeoutError instead of hanging', async () => {
+    const storage = stalledStorage();
+    try {
+      await expect(storage.put('images/k.png', Uint8Array.of(1, 2, 3), 'image/png')).rejects.toMatchObject({
+        name: 'TimeoutError',
+      });
+      await expect(storage.delete('images/k.png')).rejects.toMatchObject({ name: 'TimeoutError' });
+    } finally {
+      storage.destroy();
+    }
   });
 });
 

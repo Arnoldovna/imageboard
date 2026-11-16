@@ -64,3 +64,17 @@ export function setCookies(response: { headers: Record<string, unknown> }): stri
 export function setCookie(response: { headers: Record<string, unknown> }, name: string): string | undefined {
   return setCookies(response).find((cookie) => cookie.startsWith(`${name}=`));
 }
+
+/** Name of the session cookie (`<APP_SLUG>.sid`). */
+export const SESSION_COOKIE = 'imageboard.sid';
+
+/**
+ * Lifetime of the session cookie in whole seconds. express-session writes only `Expires` (computed from
+ * `cookie.maxAge`), so it is measured against the response's `Date` header (both have one-second resolution).
+ */
+export function sessionCookieLifetime(response: { headers: Record<string, unknown> }): number {
+  const expires = /Expires=([^;]+)/.exec(setCookie(response, SESSION_COOKIE) ?? '')?.[1];
+  const date = response.headers['date'];
+  if (expires === undefined || typeof date !== 'string') return Number.NaN;
+  return Math.round((Date.parse(expires) - Date.parse(date)) / 1000);
+}

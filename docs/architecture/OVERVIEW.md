@@ -252,12 +252,13 @@ imageboard/
 │   │   │   ├── container.ts                             [S] pg pool, redis, S3 client, session mw, limiter stores, readiness
 │   │   │   ├── app.ts                                   [S] middleware order §4.1, mounts all modules (final wiring)
 │   │   │   ├── config/
-│   │   │   │   ├── app.ts                               [S] APP_SLUG = 'imageboard', fixed windows of rate limits
+│   │   │   │   ├── app.ts                               [S] APP_SLUG = 'imageboard', fixed windows of rate limits, HTTP, readiness and S3 timeouts
 │   │   │   │   ├── env.ts                               [S] Zod env schema (§12)
 │   │   │   │   └── env.test.ts                          [S]
 │   │   │   ├── db/
 │   │   │   │   ├── client.ts                            [S] drizzle({ client: pool, schema, casing: 'snake_case' }), ping, close
 │   │   │   │   ├── migrate.ts                           [S]
+│   │   │   │   ├── keyset.ts                            [B] olderThan(createdAt, id, after): the keyset row comparison of both repositories (§4 of DATA-MODEL)
 │   │   │   │   └── schema/{index,images,comments,text-checks}.ts [S] see DATA-MODEL.md
 │   │   │   ├── shared/
 │   │   │   │   ├── errors/app-error.ts                  [S] AppError + subclasses (codes in §10)
@@ -265,6 +266,7 @@ imageboard/
 │   │   │   │   ├── http/problem.ts                      [S] toProblem, errorHandler, notFoundHandler
 │   │   │   │   ├── http/validate.ts                     [S] validate({ params, query, body }, handler)
 │   │   │   │   ├── http/require-json.ts                 [S] 415 unless application/json
+│   │   │   │   ├── http/no-store.ts                     [B] Cache-Control: no-store on every response of a router (problems included)
 │   │   │   │   ├── http/multipart.ts                    [S] createMultipartParser({ maxFileBytes }) (ADR 0017)
 │   │   │   │   ├── http/health.ts                       [S] GET /api/health (ready, cached 3 s, single flight), /api/health/live
 │   │   │   │   ├── http/__tests__/{problem,validate,require-json,multipart,health}.test.ts [S]
@@ -276,17 +278,17 @@ imageboard/
 │   │   │   │   ├── security/fetch-metadata.ts           [S] Sec-Fetch-Site / Origin guard (ADR 0003)
 │   │   │   │   ├── security/security.ts                 [S] helmet, rateLimiter(), Redis stores (no CORS)
 │   │   │   │   ├── security/__tests__/fetch-metadata.test.ts [S]
-│   │   │   │   ├── session/actor.ts                     [S] SessionData { ownerId, active }, actorOf, requireOwnerSession, markSessionActive
+│   │   │   │   ├── session/actor.ts                     [S] SessionData { ownerId, active }, actorOf, requireOwnerSession, requireOwnerId (services), markSessionActive
 │   │   │   │   ├── pagination/cursor.ts                 [S] encode/decode keyset cursor, toPage(rows, limit)
 │   │   │   │   ├── pagination/__tests__/cursor.test.ts  [S]
-│   │   │   │   ├── storage/object-storage.ts            [S] ObjectStorage port (get with ifNoneMatch/304, ObjectNotFoundError) + S3 adapter
+│   │   │   │   ├── storage/object-storage.ts            [S] ObjectStorage port (get with ifNoneMatch/304, ObjectNotFoundError) + S3 adapter (connect and request timeouts)
 │   │   │   │   └── ports/image-upload.ts                [S] ImageUploadPort, StoredImage, IncomingFile, IngestOptions (types only)
 │   │   │   ├── features/
 │   │   │   │   ├── session/                             [S] complete in scaffold
 │   │   │   │   │   ├── index.ts · session.routes.ts · session.controller.ts · session.service.ts  (identity limiter, provisional lifetime)
 │   │   │   │   │   └── __tests__/session.int.test.ts      cookie lifetime (Expires) + Redis TTL 24 h → 180 days
 │   │   │   │   ├── upload/                              [B] index.ts is a [S] stub with the final signature
-│   │   │   │   │   ├── index.ts                         createUploadModule(deps: UploadModuleDeps) → { port, mediaRouter } (ADR 0017)
+│   │   │   │   │   ├── index.ts                         createUploadModule(deps) → { port, mediaRouter }; previewKeyOf() (ADR 0017)
 │   │   │   │   │   ├── upload.config.ts                 encoder settings, preview size, frame cap defaults
 │   │   │   │   │   ├── image-sniffer.ts                 file-type → ImageMimeType (apng → png) | 415
 │   │   │   │   │   ├── image-processor.ts               metadata inspection, sharp pipeline → { original, preview, width, height, size }
@@ -315,9 +317,10 @@ imageboard/
 │   │   │   │       ├── comments.controller.ts · comments.routes.ts
 │   │   │   │       └── __tests__/{fakes.ts, comments.service.test.ts, comments.repository.int.test.ts, comments.routes.int.test.ts}
 │   │   │   └── scripts/
-│   │   │       ├── seed.ts                              [B] runSeed({ db, upload, logger }) idempotent, via upload.ingest with fixed keys
+│   │   │       ├── seed.ts                              [B] runSeed({ db, upload, storage, logger }) idempotent, via upload.ingest with fixed keys; restores missing objects of seed rows
 │   │   │       ├── seed-cli.ts                          [S] stub in 1a → [B] 2.4: seedMode() guard (SEED_ALLOW=true, never NODE_ENV) → connections → runSeed; --check (read-only) verifies rows + objects
-│   │   │       ├── admin-remove-image.ts                [B] takedown: imagesModule.adminRemove(id), requires --yes (ADR 0019)
+│   │   │       ├── admin-remove-image.ts                [B] takedown: imagesModule.adminRemove(id), requires --yes (ADR 0019); compiled into the API image
+│   │   │       ├── script-runtime.ts                    [B] withScriptContext (env, logger, db, storage; always closed), createScriptUploadPort, runCli
 │   │   │       ├── seed-content.ts                      [B] titles, names, descriptions, comments, dates (DATA-MODEL §6.4)
 │   │   │       └── fetch-seed-images.ts                 [B] one-off: Picsum ids → seed/images/*.jpg + manifest fields
 │   │   └── test/

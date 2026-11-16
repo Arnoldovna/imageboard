@@ -2,7 +2,7 @@ import type { Request } from 'express';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ForbiddenError } from '../../errors/app-error.js';
-import { actorOf, markSessionActive, requireOwnerSession, type SessionLifetimes } from '../actor.js';
+import { actorOf, markSessionActive, requireOwnerId, requireOwnerSession, type SessionLifetimes } from '../actor.js';
 
 const lifetimes: SessionLifetimes = { provisionalMs: 24 * 3_600_000, fullMs: 180 * 86_400_000 };
 
@@ -23,6 +23,17 @@ describe('actorOf', () => {
 
   it('returns a null owner for a visitor without an identity', () => {
     expect(actorOf(fakeRequest({}).req)).toEqual({ ownerId: null });
+  });
+});
+
+describe('requireOwnerId (the guard inside the services)', () => {
+  it('B-02: returns the owner id of an actor with an identity', () => {
+    expect(requireOwnerId({ ownerId: 'owner-1' })).toBe('owner-1');
+  });
+
+  it('B-02: an actor without an identity is 403 session-required', () => {
+    expect(() => requireOwnerId({ ownerId: null })).toThrow(ForbiddenError);
+    expect(() => requireOwnerId({ ownerId: null })).toThrow(expect.objectContaining({ code: 'session-required' }));
   });
 });
 

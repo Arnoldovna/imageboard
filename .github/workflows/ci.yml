@@ -125,6 +125,8 @@ jobs:
       - run: pnpm dev:setup
       - name: .env unchanged by the second run
         run: cmp .env "$RUNNER_TEMP/env.first"
+      # 16 images, 60 comments and 32 objects in the real MinIO after two seed runs (ADR 0014, read-only).
+      - run: pnpm --filter @app/api db:seed:check
 
   gitleaks:
     name: secret scan (gitleaks)

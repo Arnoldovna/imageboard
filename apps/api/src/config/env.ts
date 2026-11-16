@@ -64,6 +64,21 @@ export function cookiesAreSecure(env: Pick<Env, 'COOKIE_SECURE' | 'NODE_ENV'>): 
   return env.COOKIE_SECURE ?? env.NODE_ENV === 'production';
 }
 
+/**
+ * The operator-tuned upload settings in the shape of the upload module's `UploadConfig`, so the API and the scripts
+ * (seed, takedown) build the upload pipeline from the same keys.
+ */
+export function uploadConfig(
+  env: Pick<Env, 'UPLOAD_MAX_PIXELS' | 'UPLOAD_MAX_FRAMES' | 'IMAGE_MAX_EDGE' | 'MEDIA_PUBLIC_BASE_URL'>,
+) {
+  return {
+    maxPixels: env.UPLOAD_MAX_PIXELS,
+    maxFrames: env.UPLOAD_MAX_FRAMES,
+    maxEdge: env.IMAGE_MAX_EDGE,
+    mediaPublicBaseUrl: env.MEDIA_PUBLIC_BASE_URL,
+  };
+}
+
 /** `.env` files and compose interpolation produce `KEY=` for unset optional keys; treat those as missing. */
 function withoutEmptyValues(source: NodeJS.ProcessEnv): Record<string, string> {
   return Object.fromEntries(

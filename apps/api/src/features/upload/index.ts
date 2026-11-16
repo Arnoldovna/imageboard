@@ -1,10 +1,17 @@
-// Public API of the upload feature (ADR 0017, signatures frozen). Phase 1b stub: phase 2.1 replaces the bodies
-// (sniffer, sharp pipeline, preview, object keys, media routes) without changing the exported types.
-import { type RequestHandler, Router } from 'express';
+// Public API of the upload feature (ADR 0017, signatures frozen): the `ImageUploadPort` the images module receives
+// (sniff, sharp pipeline, preview, object keys, storage) and the media router mounted at /api/media.
+import type { RequestHandler, Router } from 'express';
 import type { Logger } from 'pino';
 
 import type { ImageUploadPort } from '../../shared/ports/image-upload.js';
 import type { ObjectStorage } from '../../shared/storage/object-storage.js';
+import { createImageProcessor } from './image-processor.js';
+import { createMediaController } from './media.controller.js';
+import { createMediaRouter } from './media.routes.js';
+import { createUploadService } from './upload.service.js';
+
+/** `images/<uuid>.<ext>` → `previews/<uuid>.webp` (ADR 0018). Pure; the seed scripts use it to check both objects. */
+export { previewKeyOf } from './object-key.js';
 
 export interface UploadConfig {
   maxPixels: number; // UPLOAD_MAX_PIXELS, per frame
@@ -26,23 +33,15 @@ export interface UploadModule {
   mediaRouter: Router;
 }
 
-const STUB_MESSAGE = 'upload module is a scaffold stub (implemented in phase 2.1)';
-
-const notImplemented = (): Promise<never> => Promise.reject(new Error(STUB_MESSAGE));
-
-function notImplementedSync(): never {
-  throw new Error(STUB_MESSAGE);
-}
-
-export function createUploadModule(_deps: UploadModuleDeps): UploadModule {
-  return {
-    port: {
-      ingest: notImplemented,
-      discard: () => Promise.resolve(),
-      publicUrl: notImplementedSync,
-      previewUrl: notImplementedSync,
-    },
-    // No routes yet: /api/media/* falls through to the 404 problem handler.
-    mediaRouter: Router(),
-  };
+/** Builds the module without touching the network: storage is used only when a request or `ingest` runs. */
+export function createUploadModule({ storage, logger, config, mediaLimiter, sleep }: UploadModuleDeps): UploadModule {
+  const port = createUploadService({
+    storage,
+    logger,
+    processor: createImageProcessor(config),
+    mediaPublicBaseUrl: config.mediaPublicBaseUrl,
+    ...(sleep ? { sleep } : {}),
+  });
+  const mediaRouter = createMediaRouter({ controller: createMediaController({ storage }), mediaLimiter });
+  return { port, mediaRouter };
 }

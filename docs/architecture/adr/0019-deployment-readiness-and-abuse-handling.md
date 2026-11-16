@@ -35,7 +35,11 @@ Built now (cheap, and tested like everything else):
 - **Takedown path**: `pnpm --filter @app/api admin:remove-image <id>` (`src/scripts/admin-remove-image.ts`) loads env,
   builds the modules like the composition root and calls `imagesModule.adminRemove(id)` (ADR 0017), which deletes the
   row (comments cascade) and discards original and preview. It logs `{ imageId, objectKey }` at `warn` and refuses to
-  run without `--yes`. Tested in `test/admin-remove-image.int.test.ts`.
+  run without `--yes`. Tested in `test/admin-remove-image.int.test.ts`. The `pnpm` script needs a checkout with `tsx`;
+  a deployment runs the compiled copy that the API image already contains, like the `migrate` service runs
+  `dist/db/migrate.js`: the API image with the api's environment and the command
+  `dist/scripts/admin-remove-image.js <id> --yes` (on the compose stack:
+  `docker compose --profile app run --rm --no-deps api dist/scripts/admin-remove-image.js <id> --yes`).
 - **Global daily upload cap** (`RATE_LIMIT_UPLOADS_GLOBAL_DAY` = 200, ADR 0013) bounds storage cost even against
   many IPs.
 - **IP minimisation in logs**: the pino-http request serializer logs `remoteAddress` truncated to /24 (IPv4) or /48
@@ -55,7 +59,8 @@ description; none of it blocks the Definition of Done for the private repository
    ≥ its probe interval × unhealthy threshold, and the platform's stop timeout above that plus 10 s (ADR 0013).
 5. Imprint (Impressum) and privacy page (log contents, retention, session cookie, no tracking) linked from the
    footer; content written and confirmed by Marina.
-6. A contact address for takedown requests in the privacy page; the admin script above is the procedure.
+6. A contact address for takedown requests in the privacy page; the admin script above, run inside the deployed API
+   image, is the procedure.
 7. Billing alarm on the S3 account and a bucket lifecycle rule for incomplete multipart uploads (defensive).
 8. The repository is public: `images` and `deploy` in `release.yml` only run then (CI cost rule, ADR 0020).
    Deploying from a private repository needs a superseding ADR.

@@ -5,29 +5,23 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 
 import { createTestApp, type TestApp } from '../../../../test/test-app.js';
-import { agentWithSession, problemOf, setCookie } from '../../../../test/http.js';
+import {
+  agentWithSession,
+  problemOf,
+  SESSION_COOKIE,
+  sessionCookieLifetime,
+  setCookie,
+} from '../../../../test/http.js';
 import { silentLogger } from '../../../../test/fakes.js';
 import { connectRedis, type RedisClient } from '../../../shared/redis/redis.js';
 import { createSessionMiddleware } from '../../../shared/security/session.js';
 import { markSessionActive } from '../../../shared/session/actor.js';
 
-const SESSION_COOKIE = 'imageboard.sid';
 const CSRF_COOKIE = 'imageboard.x-csrf-token';
 const DAY_SECONDS = 24 * 60 * 60;
 
-/**
- * Lifetime of the session cookie in whole seconds. express-session writes only `Expires` (computed from
- * `cookie.maxAge`), so it is measured against the response's `Date` header (both have one-second resolution).
- */
-function cookieLifetime(response: request.Response): number {
-  const expires = /Expires=([^;]+)/.exec(setCookie(response, SESSION_COOKIE) ?? '')?.[1];
-  const date = response.headers['date'];
-  if (expires === undefined || typeof date !== 'string') return Number.NaN;
-  return Math.round((Date.parse(expires) - Date.parse(date)) / 1000);
-}
-
 function expectLifetime(response: request.Response, seconds: number): void {
-  const lifetime = cookieLifetime(response);
+  const lifetime = sessionCookieLifetime(response);
   expect(lifetime).toBeGreaterThanOrEqual(seconds - 1);
   expect(lifetime).toBeLessThanOrEqual(seconds + 1);
 }

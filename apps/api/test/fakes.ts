@@ -10,6 +10,15 @@ export function silentLogger(): Logger {
   return pino({ level: 'silent' });
 }
 
+export type LogLine = Record<string, unknown>;
+
+/** A pino logger that keeps every line (debug and up), so tests can assert what ops would see. */
+export function captureLogger() {
+  const lines: LogLine[] = [];
+  const logger = pino({ level: 'debug' }, { write: (line: string) => lines.push(JSON.parse(line) as LogLine) });
+  return { logger, lines, errors: () => lines.filter((line) => line['level'] === 50) };
+}
+
 export interface FakeStorageOptions {
   /** Every put rejects (storage outage). */
   failPut?: boolean;

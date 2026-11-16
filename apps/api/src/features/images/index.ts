@@ -1,10 +1,14 @@
-// Public API of the images feature (ADR 0017, signatures frozen). Phase 1b stub: phase 2.2 replaces the bodies
-// (list, get, create, delete, exists, adminRemove) without changing the exported types.
-import { type RequestHandler, Router } from 'express';
+// Public API of the images feature (ADR 0017, signatures frozen): list, get, create and delete under /api/images,
+// plus `exists` for the comments module and `adminRemove` for the takedown script (ADR 0019).
+import type { RequestHandler, Router } from 'express';
 import type { Logger } from 'pino';
 
 import type { Database } from '../../db/client.js';
 import type { ImageUploadPort } from '../../shared/ports/image-upload.js';
+import { createImagesController } from './images.controller.js';
+import { createImagesRepository } from './images.repository.js';
+import { createImagesRouter } from './images.routes.js';
+import { createImagesService } from './images.service.js';
 
 export interface ImagesModuleDeps {
   db: Database;
@@ -22,14 +26,20 @@ export interface ImagesModule {
   adminRemove(id: number): Promise<'removed' | 'not-found'>;
 }
 
-const notImplemented = (): Promise<never> =>
-  Promise.reject(new Error('images module is a scaffold stub (implemented in phase 2.2)'));
-
-export function createImagesModule(_deps: ImagesModuleDeps): ImagesModule {
+/** Wires repository → service → controller → router. Opens no connections and never throws (ADR 0021 §2). */
+export function createImagesModule({
+  db,
+  logger,
+  upload,
+  parseMultipart,
+  limiters,
+  pageSize,
+}: ImagesModuleDeps): ImagesModule {
+  const service = createImagesService({ repository: createImagesRepository(db), upload, logger });
+  const controller = createImagesController({ service, pageSize });
   return {
-    // No routes yet: /api/images/* falls through to the 404 problem handler.
-    router: Router(),
-    exists: notImplemented,
-    adminRemove: notImplemented,
+    router: createImagesRouter({ controller, parseMultipart, limiters }),
+    exists: (id) => service.exists(id),
+    adminRemove: (id) => service.adminRemove(id),
   };
 }
