@@ -1,5 +1,4 @@
-import { LIMITS } from '@app/shared';
-import { z } from 'zod';
+import { CursorPayload } from '@app/shared';
 
 import { InvalidCursorError } from '../errors/app-error.js';
 
@@ -13,16 +12,6 @@ export interface KeysetPosition {
   createdAt: Date;
   id: number;
 }
-
-/**
- * `t` has millisecond precision like `timestamptz(3)`, so the position round-trips exactly. Year 0000 is valid ISO
- * 8601 but not a Postgres timestamp ("date/time field value out of range", 22008): the query would fail with a 500, so
- * the cursor is refused here instead. No row can carry such a time, so no issued cursor ever does.
- */
-const CursorPayload = z.strictObject({
-  t: z.iso.datetime({ precision: 3 }).refine((value) => !value.startsWith('0000-')),
-  id: z.number().int().positive().max(LIMITS.maxId),
-});
 
 export function encodeCursor({ createdAt, id }: KeysetPosition): string {
   return Buffer.from(JSON.stringify({ t: createdAt.toISOString(), id })).toString('base64url');

@@ -1,7 +1,8 @@
 import { fileMessages, uploadTooLarge } from '@app/shared';
 import { describe, expect, it } from 'vitest';
 
-import { ACCEPTED_IMAGE_TYPES, checkImageFile, sniffImageType } from '../client-file-check';
+import { sniffImageType } from '../../../shared/files/image-type';
+import { ACCEPTED_IMAGE_TYPES, checkImageFile } from '../client-file-check';
 
 const MIB = 1024 * 1024;
 

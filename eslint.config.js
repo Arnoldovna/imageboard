@@ -17,7 +17,7 @@ export default defineConfig([
     crossFeatureImports: false,
   }),
   noImportCycles({
-    files: ['apps/api/**/*.ts', 'packages/*/**/*.ts', 'e2e/**/*.ts', '*.config.ts'],
+    files: ['apps/api/**/*.ts', 'packages/*/**/*.ts', 'e2e/**/*.ts', 'e2e-demo/**/*.ts', '*.config.ts'],
     tsconfigs: ['apps/api/tsconfig.json', 'packages/*/tsconfig.json', 'tsconfig.json'],
   }),
   {
@@ -43,7 +43,7 @@ export default defineConfig([
     rules: { 'no-console': 'off' },
   },
   {
-    files: ['**/__tests__/**', '**/*.test.ts', 'e2e/**'],
+    files: ['**/__tests__/**', '**/*.test.ts', 'e2e/**', 'e2e-demo/**'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   prettier,

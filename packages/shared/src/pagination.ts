@@ -13,6 +13,18 @@ export const Cursor = z
   .max(LIMITS.cursorMaxLength, { error: requestMessages.invalidCursor });
 export type Cursor = z.infer<typeof Cursor>;
 
+/**
+ * What an opaque cursor decodes to (ADR 0007): the keyset position `{ t, id }` of the last item the client has seen,
+ * base64url-encoded JSON. `t` has millisecond precision like `timestamptz(3)`, so the position round-trips exactly.
+ * Year 0000 is valid ISO 8601 but not a Postgres timestamp, so it is refused here instead of failing the query.
+ * Shared by the API and the live demo's in-browser API, so both accept and refuse exactly the same cursors.
+ */
+export const CursorPayload = z.strictObject({
+  t: z.iso.datetime({ precision: 3 }).refine((value) => !value.startsWith('0000-')),
+  id: z.number().int().positive().max(LIMITS.maxId),
+});
+export type CursorPayload = z.infer<typeof CursorPayload>;
+
 const INTEGER = /^-?\d+$/;
 
 function clamp(value: number, min: number, max: number): number {

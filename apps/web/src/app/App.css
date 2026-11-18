@@ -1,9 +1,15 @@
 @reference "#styles/main.css";
 
-/* maw page shell: one left-aligned 1280px column, gutters 12px (mobile) and 20px (from sm). */
+/*
+ * maw page shell: one left-aligned 1280px column, gutters 12px (mobile) and 20px (from sm). At least one screen tall,
+ * minus the live demo's banner above it (published by DemoBanner.vue; absent, and 0, in every other build), so a short
+ * page never scrolls just by the banner's height.
+ */
 @layer components {
   .app-shell {
-    @apply flex flex-col mx-auto max-inline-page min-block-dvh;
+    @apply flex flex-col mx-auto max-inline-page;
+
+    min-block-size: var(--shell-min-block-size);
   }
 
   .app-shell__main {

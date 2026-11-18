@@ -135,6 +135,7 @@
   --header-fade-block-size: 1.5rem; /* the fade edge under a pinned row (fade-edge utility, root scroll padding) */
   --preview-width: 22rem; /* hover image preview */
   --media-max-block-size: min(var(--container-prose), 70dvh); /* detail image: prose measure, ≤ 70% of the screen */
+  --shell-min-block-size: calc(100dvh - var(--demo-banner-block-size, 0px)); /* one screen minus the demo banner */
 
   /* 8. Motion */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);

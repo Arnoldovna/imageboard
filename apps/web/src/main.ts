@@ -10,6 +10,19 @@ import App from './app/App.vue';
 import { createAppRouter } from './app/router';
 import { useSessionStore } from './shared/session/session.store';
 
+// Live demo build only (`vite build --mode demo`): `/api` is answered in the browser before the first request. In every
+// other mode the condition is a constant `false`, so the bundler drops the import and MSW never ships (check:bundle).
+// If it cannot start (IndexedDB blocked, no service worker and no fetch fallback), the app still mounts: its requests
+// then fail like an unreachable API, with the app's own "service is not available" messages instead of a blank page.
+if (import.meta.env.MODE === 'demo') {
+  try {
+    const { startDemo } = await import('./demo/index');
+    await startDemo();
+  } catch (error) {
+    console.error('The live demo could not start its in-browser API.', error);
+  }
+}
+
 const app = createApp(App);
 const pinia = createPinia();
 app.use(pinia);

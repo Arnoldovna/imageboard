@@ -82,6 +82,34 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm build
+      # The production bundle carries no MSW and no demo code (PLAN Etappe 3b); the demo job builds the demo itself.
+      - run: pnpm check:bundle
+
+  # The live demo (pages.yml deploys it only once the repository is public): Playwright + axe against the built demo
+  # under vite preview. No Docker, so it is cheap, but like e2e it runs on pull requests only (ADR 0020).
+  demo:
+    name: live demo smoke (MSW + Playwright)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm build:demo
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:demo
+        env:
+          CI: 'true'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: demo-playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
 
   # CI cost rule (ADR 0020): pull requests only. The PR run is also the proof that both production images build.
   e2e:

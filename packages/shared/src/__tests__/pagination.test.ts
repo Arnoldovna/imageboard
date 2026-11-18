@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { Cursor, LIMITS, pageOf, pageQuery, requestMessages } from '../index.js';
+import { Cursor, CursorPayload, LIMITS, pageOf, pageQuery, requestMessages, toFieldErrors } from '../index.js';
 
 const ImagesQuery = pageQuery(LIMITS.imagesPage.default, LIMITS.imagesPage.max);
 
@@ -81,5 +81,42 @@ describe('pageOf', () => {
 
   it('requires both members', () => {
     expect(Page.safeParse({ items: [] }).success).toBe(false);
+  });
+});
+
+describe('CursorPayload', () => {
+  it('accepts a keyset position with millisecond time and a positive id', () => {
+    expect(CursorPayload.parse({ t: '2026-09-21T06:42:00.000Z', id: 7 })).toEqual({
+      t: '2026-09-21T06:42:00.000Z',
+      id: 7,
+    });
+  });
+
+  it.each([
+    ['year 0000', { t: '0000-01-01T00:00:00.000Z', id: 1 }],
+    ['seconds precision', { t: '2026-09-21T06:42:00Z', id: 1 }],
+    ['an id above the Postgres integer range', { t: '2026-09-21T06:42:00.000Z', id: LIMITS.maxId + 1 }],
+    ['an extra key', { t: '2026-09-21T06:42:00.000Z', id: 1, x: 1 }],
+  ])('rejects %s', (_name, payload) => {
+    expect(CursorPayload.safeParse(payload).success).toBe(false);
+  });
+});
+
+describe('toFieldErrors', () => {
+  it('names each issue by its path, a whole-part issue by the root field, and every unknown key on its own', () => {
+    const query = ImagesQuery.safeParse({ limit: 'x', sort: 'new', order: 'asc' });
+    if (query.success) throw new Error('expected issues');
+    expect(toFieldErrors('query', query.error.issues)).toEqual([
+      { field: 'limit', location: 'query', message: requestMessages.invalidLimit },
+      { field: 'sort', location: 'query', message: requestMessages.unknownField },
+      { field: 'order', location: 'query', message: requestMessages.unknownField },
+    ]);
+
+    const id = z.string().safeParse(1);
+    if (id.success) throw new Error('expected an issue');
+    expect(toFieldErrors('params', id.error.issues, 'id')).toEqual([
+      { field: 'id', location: 'params', message: id.error.issues[0]?.message },
+    ]);
+    expect(toFieldErrors('body', id.error.issues)[0]?.field).toBe('body');
   });
 });

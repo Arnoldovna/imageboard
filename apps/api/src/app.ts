@@ -1,3 +1,4 @@
+import { LIMITS } from '@app/shared';
 import cookieParser from 'cookie-parser';
 import express, { type Express, type RequestHandler } from 'express';
 import type { Logger } from 'pino';
@@ -113,7 +114,7 @@ export function createApp(deps: AppDeps): Express {
   // parsing its body, without a Redis read and without the rolling session cookie renewing the victim's session.
   app.use('/api', createFetchMetadataGuard({ appOrigin: env.APP_ORIGIN }));
   // 16 KB JSON only; no urlencoded parser and no CORS (same origin, ADR 0003; F-49).
-  app.use(express.json({ limit: '16kb', strict: true }));
+  app.use(express.json({ limit: LIMITS.jsonBodyMaxBytes, strict: true }));
   app.use(deps.session);
   app.use(cookieParser()); // after express-session, as csrf-csrf requires
 

@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     name: 'unit:web',
     environment: 'happy-dom',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'build/**/*.test.ts'],
     restoreMocks: true,
   },
 });

@@ -8,6 +8,11 @@ features and every problem I found in the old code fixed.
 [![Release](https://github.com/Arnoldovna/Imageboard/actions/workflows/release.yml/badge.svg)](https://github.com/Arnoldovna/Imageboard/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
+**Live-Demo:** [arnoldovna.github.io/imageboard](https://arnoldovna.github.io/imageboard/). It goes live once this
+repository is public (GitHub Pages is free for public repositories only). The demo is the real frontend, but its API
+runs in your browser (Mock Service Worker, data in IndexedDB): uploads and comments never leave your browser, and
+"reset demo" restores the seeded photos.
+
 ![Gallery on a 1440 px wide screen: the "imageboard" heading, a collapsed "upload an image" bar and two rows of four photo tiles, each with its title, author name and date](docs/media/desktop-light.png)
 
 | Mobile (390 px)                                                                                              | Dark mode (follows the system setting)                                             |
@@ -136,19 +141,28 @@ pnpm dev             # web on http://localhost:5173, API on http://localhost:300
 
 `pnpm dev:setup` is idempotent: running it again changes nothing.
 
+Live demo locally (no Docker; the same build GitHub Pages serves):
+
+```bash
+pnpm build:demo                            # apps/web/dist-demo, base path /imageboard/
+pnpm --filter @app/web preview:demo        # http://localhost:4174/imageboard/
+```
+
 ## Scripts
 
-| Script                                        | What it does                                                                                                     |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `pnpm demo`                                   | production images with demo data on http://127.0.0.1:8080                                                        |
-| `pnpm dev:setup`                              | one-time local setup (idempotent)                                                                                |
-| `pnpm dev`                                    | web and API in watch mode                                                                                        |
-| `pnpm build`                                  | builds the shared package, the API and the web app                                                               |
-| `pnpm verify`                                 | everything CI runs: format, lint, Stylelint, utility-class check, types, unit, integration, build, e2e, gitleaks |
-| `pnpm test` / `test:integration` / `test:e2e` | unit tests / API against real Postgres and Redis / browser tests with axe against the production images          |
-| `pnpm db:generate` / `db:migrate` / `db:seed` | new migration from the Drizzle schema / apply migrations / demo data                                             |
-| `pnpm stack:up` / `stack:down`                | production images on the dev compose project                                                                     |
-| `pnpm media:readme`                           | regenerates the screenshots and the upload clip in `docs/media` against a running `pnpm demo`                    |
+| Script                                        | What it does                                                                                                                                    |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm demo`                                   | production images with demo data on http://127.0.0.1:8080                                                                                       |
+| `pnpm dev:setup`                              | one-time local setup (idempotent)                                                                                                               |
+| `pnpm dev`                                    | web and API in watch mode                                                                                                                       |
+| `pnpm build`                                  | builds the shared package, the API and the web app                                                                                              |
+| `pnpm build:demo` / `test:demo`               | the static live demo (API in the browser via MSW + IndexedDB) / its Playwright + axe smoke test                                                 |
+| `pnpm check:bundle`                           | proves the production build contains no MSW or demo code                                                                                        |
+| `pnpm verify`                                 | everything CI runs: format, lint, Stylelint, utility-class check, types, unit, integration, build, bundle check, live demo smoke, e2e, gitleaks |
+| `pnpm test` / `test:integration` / `test:e2e` | unit tests / API against real Postgres and Redis / browser tests with axe against the production images                                         |
+| `pnpm db:generate` / `db:migrate` / `db:seed` | new migration from the Drizzle schema / apply migrations / demo data                                                                            |
+| `pnpm stack:up` / `stack:down`                | production images on the dev compose project                                                                                                    |
+| `pnpm media:readme`                           | regenerates the screenshots and the upload clip in `docs/media` against a running `pnpm demo`                                                   |
 
 ## Testing
 
@@ -161,13 +175,19 @@ pnpm dev             # web on http://localhost:5173, API on http://localhost:300
   shared with dev or demo). Desktop Chromium at 1440 px, a 390 px mobile profile, and WebKit for the smoke and
   detail-dialog journeys. Every spec file runs axe checks, in light and dark mode.
 
-Run them with `pnpm test`, `pnpm test:integration` and `pnpm test:e2e` (Docker must be running for the last two).
+- **Live demo**: unit tests for the in-browser API (validation, CSRF, ownership, pagination, IndexedDB persistence
+  and reset, against `fake-indexeddb`), and a Playwright smoke with axe against the built demo under `vite preview`.
+
+Run them with `pnpm test`, `pnpm test:integration` and `pnpm test:e2e` (Docker must be running for the last two), and
+`pnpm build:demo && pnpm test:demo` for the live demo.
 
 ## CI/CD
 
 [`ci.yml`](.github/workflows/ci.yml) runs on every pull request and on `main`: lint (with a schema drift check),
 types, unit and integration tests, build, a twice-run `dev:setup` smoke test and a gitleaks scan of the full
-history. The e2e job runs on pull requests only. [`release.yml`](.github/workflows/release.yml) builds the web and API
+history. The build job also checks that no demo code reaches the production bundle and builds the live demo; the
+e2e job and the live demo smoke run on pull requests only. [`pages.yml`](.github/workflows/pages.yml) deploys the
+live demo to GitHub Pages from `main`, only while the repository is public. [`release.yml`](.github/workflows/release.yml) builds the web and API
 images from commits that passed CI on `main` and pushes them to GHCR; while the repository is private it is skipped.
 The deploy job is prepared but switched off until a host exists (`DEPLOY_ENABLED`). A weekly
 [`audit.yml`](.github/workflows/audit.yml) runs `pnpm audit` outside the pull request gate, and Dependabot keeps

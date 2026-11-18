@@ -20,28 +20,28 @@ Companion documents:
 
 ## 0. Revision 1 (architecture critique)
 
-| Finding                                                     | Resolution                                                                                                                                                                                       | Where                              |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- |
-| Integration files shared one DB, production limiter budgets | Database per test file cloned from a migrated template; test apps default all limits to 100000                                                                                                   | ADR 0015, §15, DATA-MODEL §6.7     |
-| Frozen stub contracts incomplete                            | Exact TS signatures for ports, module deps, `ObjectStorage.get`, `createTestApp`; multer moved to `shared/http/multipart.ts`                                                                     | ADR 0017, §5                       |
-| E2E polluted dev data and hit global/media limits           | Isolated compose project `imageboard-e2e` (tmpfs, own port, all limits raised, `down -v`), no `webServer` reuse, no seed reliance                                                                | ADR 0015, §16                      |
-| Anonymous sessions could flood Redis                        | Identity limiter, 24 h provisional sessions, production Redis layout                                                                                                                             | ADR 0002, 0013                     |
-| Live region inert behind modal dialogs                      | Live region per `ModalDialog`, announcer routes to the top-most dialog                                                                                                                           | ADR 0010, 0011                     |
-| Tile accessible name duplicated; ambiguous delete labels    | Tile `alt=""`, link holds only preview + title; "delete image" / "delete comment"                                                                                                                | ADR 0012, FEATURES §14             |
-| Scroll-lock selector fails stylelint                        | `:root:has(dialog[open])`                                                                                                                                                                        | ADR 0011, §8.2                     |
-| CRLF vs LF, locale-dependent control classes                | `\r\n?` → `\n`, explicit shared code-point classes for Zod and SQL, 23514 → 400                                                                                                                  | ADR 0006, DATA-MODEL §1.1          |
-| Public, unlimited `/api/health`                             | Internal only (nginx deny), 3 s cached readiness                                                                                                                                                 | ADR 0013                           |
-| APNG, animated pixel limit, `accept`                        | APNG as PNG, per-frame pixels + frame cap, explicit `accept`                                                                                                                                     | ADR 0005                           |
-| Client parsed responses too strictly                        | Tolerant reader (`z.object`, open `code`), `unexpected-response`, nginx body size from env                                                                                                       | ADR 0009, 0010, 0013               |
-| Flaky `EXPLAIN` assertion                                   | `SET LOCAL enable_seqscan/bitmapscan = off`, assert no Sort                                                                                                                                      | ADR 0015, BUILD-ORDER 2.3          |
-| CI gaps                                                     | audit in its own non-PR workflow, schema drift check, dev-setup smoke job, WebKit smoke                                                                                                          | §16                                |
-| DX / one-command setup                                      | `git init` in place, docs-only first commit, Node 26 (machine: `~/Code/.devenv.sh`, BUILD-ORDER Phase 0) + `engine-strict`, `pnpm dev:setup`, non-overwriting `setup-env.mjs` (`pnpm setup:env`) | §16, BUILD-ORDER 1a                |
-| Parallel agents collide                                     | Agents run only their own paths; one orchestrated e2e stack; phase 1 split into 1a/1b                                                                                                            | BUILD-ORDER                        |
-| Full-size images in tiles; no gzip                          | One WebP preview rendition; gzip for static assets                                                                                                                                               | ADR 0018, §16                      |
-| Whole upload form sticky                                    | One-row sticky bar, form in normal flow                                                                                                                                                          | ADR 0012                           |
-| Pre-deploy gaps                                             | Forwarded scheme map, nginx template (CSP/body size), takedown script, global upload cap, IP truncation, checklist                                                                               | ADR 0019                           |
-| CORS unused                                                 | Removed; guard uses `APP_ORIGIN` or the request's own origin                                                                                                                                     | ADR 0003                           |
-| Contradictions                                              | F-40 deviations flagged, comment `Location` dropped, theme-toggle rationale fixed, pnpm 10 stated as own choice, profile URLs to be confirmed                                                    | FEATURES §14, ADR 0001, 0012, §8.3 |
+| Finding                                                     | Resolution                                                                                                                                                                                  | Where                              |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| Integration files shared one DB, production limiter budgets | Database per test file cloned from a migrated template; test apps default all limits to 100000                                                                                              | ADR 0015, §15, DATA-MODEL §6.7     |
+| Frozen stub contracts incomplete                            | Exact TS signatures for ports, module deps, `ObjectStorage.get`, `createTestApp`; multer moved to `shared/http/multipart.ts`                                                                | ADR 0017, §5                       |
+| E2E polluted dev data and hit global/media limits           | Isolated compose project `imageboard-e2e` (tmpfs, own port, all limits raised, `down -v`), no `webServer` reuse, no seed reliance                                                           | ADR 0015, §16                      |
+| Anonymous sessions could flood Redis                        | Identity limiter, 24 h provisional sessions, production Redis layout                                                                                                                        | ADR 0002, 0013                     |
+| Live region inert behind modal dialogs                      | Live region per `ModalDialog`, announcer routes to the top-most dialog                                                                                                                      | ADR 0010, 0011                     |
+| Tile accessible name duplicated; ambiguous delete labels    | Tile `alt=""`, link holds only preview + title; "delete image" / "delete comment"                                                                                                           | ADR 0012, FEATURES §14             |
+| Scroll-lock selector fails stylelint                        | `:root:has(dialog[open])`                                                                                                                                                                   | ADR 0011, §8.2                     |
+| CRLF vs LF, locale-dependent control classes                | `\r\n?` → `\n`, explicit shared code-point classes for Zod and SQL, 23514 → 400                                                                                                             | ADR 0006, DATA-MODEL §1.1          |
+| Public, unlimited `/api/health`                             | Internal only (nginx deny), 3 s cached readiness                                                                                                                                            | ADR 0013                           |
+| APNG, animated pixel limit, `accept`                        | APNG as PNG, per-frame pixels + frame cap, explicit `accept`                                                                                                                                | ADR 0005                           |
+| Client parsed responses too strictly                        | Tolerant reader (`z.object`, open `code`), `unexpected-response`, nginx body size from env                                                                                                  | ADR 0009, 0010, 0013               |
+| Flaky `EXPLAIN` assertion                                   | `SET LOCAL enable_seqscan/bitmapscan = off`, assert no Sort                                                                                                                                 | ADR 0015, BUILD-ORDER 2.3          |
+| CI gaps                                                     | audit in its own non-PR workflow, schema drift check, dev-setup smoke job, WebKit smoke                                                                                                     | §16                                |
+| DX / one-command setup                                      | `git init` in place, docs-only first commit, Node 26 (machine: `~/.devenv.sh`, BUILD-ORDER Phase 0) + `engine-strict`, `pnpm dev:setup`, non-overwriting `setup-env.mjs` (`pnpm setup:env`) | §16, BUILD-ORDER 1a                |
+| Parallel agents collide                                     | Agents run only their own paths; one orchestrated e2e stack; phase 1 split into 1a/1b                                                                                                       | BUILD-ORDER                        |
+| Full-size images in tiles; no gzip                          | One WebP preview rendition; gzip for static assets                                                                                                                                          | ADR 0018, §16                      |
+| Whole upload form sticky                                    | One-row sticky bar, form in normal flow                                                                                                                                                     | ADR 0012                           |
+| Pre-deploy gaps                                             | Forwarded scheme map, nginx template (CSP/body size), takedown script, global upload cap, IP truncation, checklist                                                                          | ADR 0019                           |
+| CORS unused                                                 | Removed; guard uses `APP_ORIGIN` or the request's own origin                                                                                                                                | ADR 0003                           |
+| Contradictions                                              | F-40 deviations flagged, comment `Location` dropped, theme-toggle rationale fixed, pnpm 10 stated as own choice, profile URLs to be confirmed                                               | FEATURES §14, ADR 0001, 0012, §8.3 |
 
 ### Revision 2 (consistency-pass review)
 
@@ -50,7 +50,7 @@ after round 1. An adversarial re-review found these contradictions and steps tha
 
 | Finding                                                                                                                                                                               | Resolution                                                                                                                                                                               | Where                                       |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Phase 0 told agents to install fnm, Node and brew git; PLAN.md says Phase 0 is done via `~/Code/.devenv.sh` without system changes                                                    | Phase 0 = `source /Users/marina/Code/.devenv.sh` (Node 26.13.1, pnpm 10.34.9 corepack shim, Apple Git 2.50); Playwright browsers installed once in 1a                                    | ADR 0021 §1, BUILD-ORDER Phase 0            |
+| Phase 0 told agents to install fnm, Node and brew git; PLAN.md says Phase 0 is done via `~/.devenv.sh` without system changes                                                         | Phase 0 = `source ~/.devenv.sh` (Node 26.13.1, pnpm 10.34.9 corepack shim, Apple Git 2.50); Playwright browsers installed once in 1a                                  | ADR 0021 §1, BUILD-ORDER Phase 0            |
 | Integration harness used `imageboard_tpl`, `f_<uuid>`, clone per `createTestApp()` and allowed `TRUNCATE` (conventions §7: `<slug>_template`, setup file, no `TRUNCATE`)              | `imageboard_template`, `test/setup-database.ts` (`t_<random>` per file), `createTestDatabase()` for pristine blocks, no `TRUNCATE`; Redis prefix `test-<uuid>` for sessions and limiters | ADR 0015, 0017, 0021 §3, DATA-MODEL §5/§6.7 |
 | One working tree: every unit's integration app imports all modules, so a sibling's half-done `index.ts` turns everyone red                                                            | Swap `index.ts` last, saved files parse, stub cross-feature components in tests, sequential steps own their listed frozen files                                                          | ADR 0017, 0021 §2, BUILD-ORDER              |
 | E2E override appended `8181` to the base `8080` (Compose concatenates `ports`), so e2e collided with `pnpm demo`                                                                      | `ports: !override` for web, tmpfs mounts, `E2E_PORT` resolved once in `run-e2e.mjs`; template CI log/teardown steps removed                                                              | ADR 0015, 0021 §4, §16                      |
@@ -847,7 +847,7 @@ available as scripts. Reviewer path: `pnpm install && pnpm demo`. The README use
 
 **Git hooks** (lefthook): pre-commit `gitleaks git --staged`, lint-staged (ESLint, Prettier, stylelint,
 utility check on staged files); commit-msg commitlint (Conventional Commits). Hooks inherit the committing shell's `PATH`, so on the build
-Mac every commit comes from a shell that sourced `~/Code/.devenv.sh` (BUILD-ORDER Phase 0); a GUI client without it
+Mac every commit comes from a shell that sourced `~/.devenv.sh` (BUILD-ORDER Phase 0); a GUI client without it
 would run the hooks on Node 22 and git 2.23.
 
 ## 17. BUGS traceability
@@ -988,7 +988,8 @@ vue-router 5.5.1.
 **apps/web devDependencies**: @tailwindcss/vite 4.3.5, tailwindcss 4.3.5, @vitejs/plugin-vue 6.0.11, vite 8.3.8,
 vue-tsc 3.3.14, @vue/eslint-config-typescript 14.9.0, eslint-plugin-vue 10.12.1,
 eslint-plugin-vuejs-accessibility 2.6.3, @vue/test-utils **2.5.1** (2.6.0 published 15 Nov 2026, < 24 h),
-@testing-library/vue 8.1.0, @testing-library/user-event 14.6.10, happy-dom 21.0.4.
+@testing-library/vue 8.1.0, @testing-library/user-event 14.6.10, happy-dom 21.0.4; for the live demo (§19)
+msw **3.0.6** (3.0.7 published 18 Nov 2026, < 24 h) and fake-indexeddb 6.2.8.
 
 **packages/shared**: zod 4.6.7.
 
@@ -1011,4 +1012,39 @@ kit or icon pack.
 
 **GitHub Actions** (SHA-pinned, see versions.md): actions/checkout v7.0.1, actions/setup-node v7.1.0,
 pnpm/action-setup v6.1.1, actions/upload-artifact v7.0.2, docker/setup-buildx-action v4.4.1, docker/login-action
-v4.8.0, docker/metadata-action v6.2.0, docker/build-push-action v7.4.0; gitleaks CLI 8.30.1 (sha256-checked).
+v4.8.0, docker/metadata-action v6.2.0, docker/build-push-action v7.4.0, actions/configure-pages v6.0.0,
+actions/upload-pages-artifact v5.0.0, actions/deploy-pages v5.0.1; gitleaks CLI 8.30.1 (sha256-checked).
+
+## 19. Live demo (GitHub Pages)
+
+PLAN.md Etappe 3b: a free, static live demo at https://arnoldovna.github.io/imageboard/, without a server, without
+cold starts and without strangers' uploads on anyone's infrastructure.
+
+- **Build**: `pnpm build:demo` runs `vite build --config vite.demo.config.ts --mode demo` in apps/web. The demo
+  config extends `vite.config.ts` with `base: '/imageboard/'`, output `dist-demo/`, MSW's Vite plugin in
+  `worker-only` mode (emits `mockServiceWorker.js` under the base), `demoSeedPlugin` (the virtual module
+  `virtual:demo-seed`, generated at build time from `apps/api/src/scripts/seed-content.ts` and the photos in
+  `apps/api/seed/images/`, so the demo always shows the real seed) and `spaFallbackPlugin` (copies `index.html` to
+  `404.html`, because Pages has no rewrites). `scripts/check-bundle.mjs --demo` then checks worker, fallback and base.
+- **Switch**: `import.meta.env.MODE === 'demo'` in `main.ts` (start MSW before mounting) and `App.vue` (the banner).
+  In every other mode the condition is a constant, the bundler drops the dynamic imports, and `pnpm check:bundle`
+  proves that `apps/web/dist` contains no MSW, no worker and no demo code.
+- **In-browser API** (`apps/web/src/demo/`, element type `demo` in the ESLint boundaries; only `app/` may import its
+  `index.ts`): `demo-api.ts` implements every route of API.md that the SPA uses, with the shared request schemas
+  (strict), problem codes and messages, CSRF on mutations, ownership (seed rows belong to the fixed seed owner, so
+  visitors cannot delete them), keyset cursors and the shared response DTOs. Uploads are sniffed by magic bytes (`shared/files/image-type.ts`, the same check as the upload form), size
+  checked and decoded with `createImageBitmap`; their bytes stay in IndexedDB and are shown from `blob:` URLs.
+  Left out on purpose: rate limits, session expiry, sharp previews (the original doubles as the preview) and the
+  animation frame and pixel limits.
+- **Persistence**: `demo-store.ts`, IndexedDB `imageboard-demo` (images, comments, files, meta with the visitor's
+  owner id and the next ids). The first visit seeds it; "reset demo" in the banner ("Demo – Daten bleiben nur in
+  deinem Browser", an accent field above the header) clears every store, seeds again and reloads this tab and, through a `BroadcastChannel`, every other demo tab. The
+  banner publishes its height (`--demo-banner-block-size`), so the page shell stays one screen tall.
+- **Tests**: unit tests in `src/demo/__tests__` run the handlers through MSW's `getResponse` against
+  `fake-indexeddb`; `pnpm test:demo` (playwright.demo.config.ts, e2e-demo/) runs the built demo under `vite preview`
+  with axe in both colour schemes.
+- **CI and deploy**: ci.yml builds the demo and runs `check:bundle` in the build job and the Playwright smoke on pull
+  requests; pages.yml deploys `apps/web/dist-demo` from `main` only while the repository is public (ADR 0020).
+  One-time setup after going public: Settings → Pages → Source "GitHub Actions".
+- **Footer**: every build links "imprint" to the maw-studio imprint (`MAW_STUDIO_IMPRINT_URL` in
+  `apps/web/src/app/layout/profile-links.ts`, ADR 0019 §5).

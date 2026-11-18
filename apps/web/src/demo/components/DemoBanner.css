@@ -1,0 +1,44 @@
+@reference "#styles/main.css";
+
+/*
+ * maw accent field (§1, §4): flat sky fill, every text, underline and focus ring in on-accent black, in light and
+ * dark mode alike. The field bleeds to both edges; its content hangs from the page column's left edge (App.css).
+ */
+@layer components {
+  .demo-banner {
+    @apply bg-accent text-on-accent text-meta;
+  }
+
+  .demo-banner__inner {
+    @apply flex flex-wrap items-baseline gap-x-6 gap-y-1 mx-auto max-inline-page ps-3 pe-3 pbs-2 pbe-2;
+
+    @variant sm {
+      @apply ps-5 pe-5;
+    }
+  }
+
+  .demo-banner__text {
+    @apply m-0;
+  }
+
+  /* maw button A on the accent: underlined text; pbs-1/pbe-1 lift it above the 24px target size (WCAG 2.5.8). */
+  .demo-banner__reset {
+    @apply link-underlined m-0 ps-0 pe-0 pbs-1 pbe-1 border-0 bg-transparent text-on-accent font-sans text-meta;
+
+    cursor: pointer;
+
+    &:focus-visible {
+      outline-color: var(--color-on-accent);
+    }
+
+    &[aria-disabled='true'] {
+      cursor: progress;
+    }
+  }
+
+  .demo-banner__error {
+    @apply m-0 inline-full ps-2;
+
+    border-inline-start: var(--rule-width-strong) solid var(--color-on-accent);
+  }
+}

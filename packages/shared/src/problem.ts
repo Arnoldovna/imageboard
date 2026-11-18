@@ -67,3 +67,35 @@ export const ProblemDetails = z.looseObject({
   errors: z.array(FieldError).optional(),
 });
 export type ProblemDetails = z.infer<typeof ProblemDetails>;
+
+/** The parts of a Zod issue `toFieldErrors` reads; every issue of the shared schemas fits. */
+export interface IssueLike {
+  readonly code: string;
+  readonly path: readonly PropertyKey[];
+  readonly message: string;
+  readonly keys?: readonly string[];
+}
+
+/**
+ * Zod issues → `{ field, location, message }` (F-18). `field` is the dotted path as the client knows it; an issue on
+ * the whole part (body missing, not an object) is reported on `rootField`, by default the part itself. Unknown keys
+ * of a strict schema become one issue per key, so the client can point at each. Used by the API's `validate` and by
+ * the live demo, so both report validation errors identically.
+ */
+export function toFieldErrors(
+  location: FieldErrorLocation,
+  issues: readonly IssueLike[],
+  rootField: string = location,
+): FieldError[] {
+  return issues.flatMap((issue): FieldError[] => {
+    const path = issue.path.map(String);
+    if (issue.code === 'unrecognized_keys') {
+      return (issue.keys ?? []).map((key) => ({
+        field: [...path, key].join('.'),
+        location,
+        message: requestMessages.unknownField,
+      }));
+    }
+    return [{ field: path.length > 0 ? path.join('.') : rootField, location, message: issue.message }];
+  });
+}

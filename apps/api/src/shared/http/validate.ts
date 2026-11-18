@@ -1,4 +1,4 @@
-import { requestMessages } from '@app/shared';
+import { toFieldErrors } from '@app/shared';
 import type { Request, RequestHandler, Response } from 'express';
 import type { z } from 'zod';
 
@@ -23,23 +23,9 @@ export type ValidatedHandler<S extends RequestSchemas> = (
 type Part = keyof RequestSchemas;
 const PARTS = ['params', 'query', 'body'] as const satisfies readonly Part[];
 
-/**
- * Zod issues → `{ field, location, message }` (F-18). `field` is the dotted path as the client knows it; an issue on
- * the whole part (body missing, not an object) is reported on the part itself. Unknown keys of a strict schema
- * become one issue per key, so the client can point at each.
- */
+/** Zod issues → `{ field, location, message }`; the mapping lives in the contract, shared with the live demo. */
 export function toValidationIssues(location: Part, issues: readonly z.core.$ZodIssue[]): ValidationIssue[] {
-  return issues.flatMap((issue): ValidationIssue[] => {
-    const path = issue.path.map(String);
-    if (issue.code === 'unrecognized_keys') {
-      return issue.keys.map((key) => ({
-        field: [...path, key].join('.'),
-        location,
-        message: requestMessages.unknownField,
-      }));
-    }
-    return [{ field: path.length > 0 ? path.join('.') : location, location, message: issue.message }];
-  });
+  return toFieldErrors(location, issues);
 }
 
 /**

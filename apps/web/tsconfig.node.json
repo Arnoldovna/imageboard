@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "noEmit": true, "module": "esnext", "moduleResolution": "bundler", "types": ["node"] },
-  "include": ["vite.config.ts", "vitest.config.ts"]
+  "include": ["vite.config.ts", "vite.demo.config.ts", "vitest.config.ts", "build/**/*.ts"]
 }

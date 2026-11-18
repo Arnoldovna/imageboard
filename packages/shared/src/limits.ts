@@ -14,6 +14,8 @@ export const LIMITS = {
   /** Largest Postgres `integer`, the upper bound of every public id (F-44). */
   maxId: 2_147_483_647,
   cursorMaxLength: 200,
+  /** JSON request bodies (comments), as body-parser's `limit` in the API (API.md §0, F-49). */
+  jsonBodyMaxBytes: 16 * 1024,
   /** Default of UPLOAD_MAX_BYTES (5 MiB). The server sends the effective value in `SessionDto.uploadMaxBytes`. */
   uploadMaxBytesDefault: 5 * 1024 * 1024,
   /** Default of UPLOAD_MAX_FRAMES for animated GIF/WebP. */

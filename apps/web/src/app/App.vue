@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue';
+import { defineAsyncComponent, useTemplateRef } from 'vue';
 
 import LiveAnnouncer from '../shared/a11y/LiveAnnouncer.vue';
 import SiteFooter from './layout/SiteFooter.vue';
@@ -11,6 +11,12 @@ import SiteHeader from './layout/SiteHeader.vue';
  */
 const main = useTemplateRef<HTMLElement>('main');
 
+/** The live-demo notice; `undefined` (and absent from the bundle) in every build except `--mode demo`. */
+const DemoBanner =
+  import.meta.env.MODE === 'demo'
+    ? defineAsyncComponent(() => import('../demo/index').then((demo) => demo.DemoBanner))
+    : undefined;
+
 /** Moves focus without changing the URL: a `#main` fragment would put a stray `#` into the history (B-59). */
 function skipToContent(): void {
   main.value?.focus();
@@ -19,6 +25,7 @@ function skipToContent(): void {
 
 <template>
   <a class="skip-link" href="#main" @click.prevent="skipToContent">skip to content</a>
+  <component :is="DemoBanner" v-if="DemoBanner" />
   <div class="app-shell">
     <SiteHeader />
     <main id="main" ref="main" class="app-shell__main" tabindex="-1">
