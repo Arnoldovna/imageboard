@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMemoryHistory } from 'vue-router';
 
 import App from '../App.vue';
-import { MAW_STUDIO_IMPRINT_URL, PROFILE_LINKS } from '../layout/profile-links';
+import { PROFILE_LINKS } from '../layout/profile-links';
 import { createAppRouter } from '../router';
 import { stubApi } from './fake-api';
 
@@ -64,13 +64,12 @@ describe('App shell', () => {
     }
   });
 
-  it('links the footer to the maw-studio imprint as a plain https link (PLAN Etappe 3b)', async () => {
+  it('links the footer only to the profiles, with no imprint link (Marina, 2026-11-18)', async () => {
     await renderApp();
 
-    const imprint = within(screen.getByRole('contentinfo')).getByRole('link', { name: 'imprint' });
-    expect(imprint.getAttribute('href')).toBe(MAW_STUDIO_IMPRINT_URL);
-    expect(new URL(MAW_STUDIO_IMPRINT_URL).protocol).toBe('https:');
-    expect(imprint.hasAttribute('rel')).toBe(false);
+    const footerLinks = within(screen.getByRole('contentinfo')).getAllByRole('link');
+    expect(footerLinks.map((link) => link.textContent)).toEqual(['GitHub', 'LinkedIn']);
+    expect(within(screen.getByRole('contentinfo')).queryByRole('link', { name: /imprint|impressum/i })).toBeNull();
   });
 
   it('shows no live-demo banner outside the demo build', async () => {

@@ -41,7 +41,7 @@ async function openGallery(page: Page): Promise<void> {
 }
 
 test.describe('live demo', () => {
-  test('shows the seeded gallery from the in-browser API, with the banner, the imprint and no axe violations', async ({
+  test('shows the seeded gallery from the in-browser API, with the banner, the footer and no axe violations', async ({
     page,
   }) => {
     const apiResponses = recordApiResponses(page);
@@ -66,10 +66,8 @@ test.describe('live demo', () => {
       /^\/imageboard\/assets\//,
     );
 
-    await expect(page.getByRole('contentinfo').getByRole('link', { name: 'imprint', exact: true })).toHaveAttribute(
-      'href',
-      /^https:\/\//,
-    );
+    await expect(page.getByRole('contentinfo').getByRole('link', { name: 'GitHub', exact: true })).toBeVisible();
+    await expect(page.getByRole('contentinfo').getByRole('link', { name: /imprint|impressum/i })).toHaveCount(0);
 
     expect(apiResponses.length, 'the gallery requested the API').toBeGreaterThan(0);
     for (const response of apiResponses) {

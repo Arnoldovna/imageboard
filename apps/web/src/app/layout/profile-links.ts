@@ -9,10 +9,3 @@ export const PROFILE_LINKS = {
   github: 'https://github.com/Arnoldovna',
   linkedin: 'https://www.linkedin.com/',
 } as const;
-
-/**
- * The maw-studio imprint (Impressum) that covers this project (PLAN Etappe 3b, ADR 0019 §5), linked from the footer.
- * Marina to confirm: no imprint URL existed in the repository, so this is the conventional path on her portfolio
- * domain (maw-studio.de, maw-design-system). Change it only here.
- */
-export const MAW_STUDIO_IMPRINT_URL = 'https://maw-studio.de/impressum/';

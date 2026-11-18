@@ -1046,5 +1046,6 @@ cold starts and without strangers' uploads on anyone's infrastructure.
 - **CI and deploy**: ci.yml builds the demo and runs `check:bundle` in the build job and the Playwright smoke on pull
   requests; pages.yml deploys `apps/web/dist-demo` from `main` only while the repository is public (ADR 0020).
   One-time setup after going public: Settings → Pages → Source "GitHub Actions".
-- **Footer**: every build links "imprint" to the maw-studio imprint (`MAW_STUDIO_IMPRINT_URL` in
-  `apps/web/src/app/layout/profile-links.ts`, ADR 0019 §5).
+- **Footer**: GitHub and LinkedIn only. No imprint link (Marina's decision, 2026-11-18): the repository and the
+  static demo are non-commercial portfolio work without a server; ADR 0019 §5 applies only if a hosted deployment
+  with user content is ever switched on.
