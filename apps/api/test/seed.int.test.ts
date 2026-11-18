@@ -1,4 +1,4 @@
-import { access } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { CommentPage, CreateCommentBody, CreateImageFields, ImagePage } from '@app/shared';
@@ -18,7 +18,6 @@ import {
   SEED_IMAGES_DIR,
   SEED_OWNER_ID,
   SEED_TOTALS,
-  SeedManifest,
 } from '../src/scripts/seed-content.js';
 import { createScriptUploadPort } from '../src/scripts/script-runtime.js';
 import { checkSeed, runSeed } from '../src/scripts/seed.js';
@@ -77,7 +76,7 @@ describe('seed content (DATA-MODEL §6.3 to §6.5)', () => {
     const counts = SEED_IMAGES.map((image) => image.comments.length);
     expect(counts.filter((n) => n === 0)).toHaveLength(1);
     expect(counts.filter((n) => n === 25)).toHaveLength(1);
-    expect(SEED_IMAGES.find((image) => image.comments.length === 25)?.slug).toBe('north-sea-october');
+    expect(SEED_IMAGES.find((image) => image.comments.length === 25)?.slug).toBe('fans-all-the-way-down');
   });
 
   it('every text passes the API contract unchanged (the same Zod schemas as uploads and comments)', () => {
@@ -107,27 +106,22 @@ describe('seed content (DATA-MODEL §6.3 to §6.5)', () => {
     }
   });
 
-  it('B-44: the committed manifest credits every photo and every file is in the repository', async () => {
-    const manifest = await readManifest(SEED_IMAGES_DIR, SeedManifest);
+  it('B-44: the committed manifest names every picture and every file is in the repository', async () => {
+    const manifest = await readManifest(SEED_IMAGES_DIR);
     const entries = joinSeed(manifest);
 
     expect(entries.map((entry) => entry.image.slug)).toEqual(SEED_IMAGES.map((image) => image.slug));
     for (const { image, file } of entries) {
-      expect(file.sourceUrl).toMatch(/^https:\/\/unsplash\.com\/photos\//);
-      expect(file.licence).toBe('Unsplash License');
+      expect(file.objectKey).toMatch(/^images\/[0-9a-f-]{36}\.jpg$/);
       await expect(access(join(SEED_IMAGES_DIR, `${image.slug}.jpg`))).resolves.toBeUndefined();
     }
   });
 
-  it('a manifest and content that disagree fail loudly instead of skipping a photo', async () => {
-    const manifest = await readManifest(SEED_IMAGES_DIR, SeedManifest);
+  it('a manifest and content that disagree fail loudly instead of skipping a picture', async () => {
+    const manifest = await readManifest(SEED_IMAGES_DIR);
 
-    expect(() => joinSeed(manifest.slice(1), SEED_IMAGES)).toThrow(
-      'Without a photo: fog-over-the-pines; without content: -',
-    );
-    expect(() => joinSeed(manifest, SEED_IMAGES.slice(1))).toThrow(
-      'Without a photo: -; without content: fog-over-the-pines',
-    );
+    expect(() => joinSeed(manifest.slice(1), SEED_IMAGES)).toThrow('Without a picture: peacock; without content: -');
+    expect(() => joinSeed(manifest, SEED_IMAGES.slice(1))).toThrow('Without a picture: -; without content: peacock');
   });
 });
 
@@ -154,12 +148,13 @@ describe('runSeed with the real upload pipeline on fake storage (F-63, B-37, B-4
   }
 
   it('F-63: the first run inserts 16 images with 60 comments and stores 32 objects', async () => {
-    const manifest = await readManifest(SEED_IMAGES_DIR, SeedManifest);
+    const manifest = await readManifest(SEED_IMAGES_DIR);
     const { images: imageRows, comments: commentRows } = await snapshotRows();
 
     expect(firstRun.inserted).toEqual(SEED_IMAGES.map((image) => image.slug));
     expect(firstRun.restored).toEqual([]);
     expect(firstRun.skipped).toEqual([]);
+    expect(firstRun.retired).toEqual([]);
     expect(imageRows).toHaveLength(16);
     expect(commentRows).toHaveLength(60);
     const expectedKeys = manifest.flatMap((entry) => [entry.objectKey, previewKeyOf(entry.objectKey)]);
@@ -189,7 +184,12 @@ describe('runSeed with the real upload pipeline on fake storage (F-63, B-37, B-4
 
     const secondRun = await runSeed(seedDeps(testApp.db, storage));
 
-    expect(secondRun).toEqual({ inserted: [], restored: [], skipped: SEED_IMAGES.map((image) => image.slug) });
+    expect(secondRun).toEqual({
+      inserted: [],
+      restored: [],
+      skipped: SEED_IMAGES.map((image) => image.slug),
+      retired: [],
+    });
     expect(await snapshotRows()).toEqual(before);
     // Only reads: original and preview of each of the 16 rows are looked up, nothing is put or deleted.
     expect(storage.calls()).toEqual({ ...callsBefore, get: callsBefore.get + 32 });
@@ -197,19 +197,19 @@ describe('runSeed with the real upload pipeline on fake storage (F-63, B-37, B-4
   });
 
   it('F-63: a row whose objects are gone (e.g. a reset storage volume) gets them back; rows stay untouched', async () => {
-    const manifest = await readManifest(SEED_IMAGES_DIR, SeedManifest);
-    const fog = manifest.find((entry) => entry.slug === 'fog-over-the-pines');
-    const balconies = manifest.find((entry) => entry.slug === 'balconies');
-    await storage.delete(fog?.objectKey ?? '');
-    await storage.delete(previewKeyOf(fog?.objectKey ?? ''));
-    await storage.delete(previewKeyOf(balconies?.objectKey ?? ''));
+    const manifest = await readManifest(SEED_IMAGES_DIR);
+    const peacock = manifest.find((entry) => entry.slug === 'peacock');
+    const antelope = manifest.find((entry) => entry.slug === 'antelope-mid-leap');
+    await storage.delete(peacock?.objectKey ?? '');
+    await storage.delete(previewKeyOf(peacock?.objectKey ?? ''));
+    await storage.delete(previewKeyOf(antelope?.objectKey ?? ''));
     const before = await snapshotRows();
     const callsBefore = storage.calls();
 
     const run = await runSeed(seedDeps(testApp.db, storage));
 
     expect(run.inserted).toEqual([]);
-    expect(run.restored).toEqual(['fog-over-the-pines', 'balconies']);
+    expect(run.restored).toEqual(['peacock', 'antelope-mid-leap']);
     expect(run.skipped).toHaveLength(14);
     expect(storage.calls().put).toBe(callsBefore.put + 4);
     expect(storage.calls().delete).toBe(callsBefore.delete);
@@ -237,7 +237,7 @@ describe('runSeed with the real upload pipeline on fake storage (F-63, B-37, B-4
     const page = ImagePage.parse(response.body);
     expect(page.items).toHaveLength(12);
     expect(page.nextCursor).not.toBeNull();
-    expect(page.items[0]?.title).toBe('Rooftops from the fifth floor');
+    expect(page.items[0]?.title).toBe('Medallion with stars');
     expect(page.items.every((item) => !item.canDelete)).toBe(true);
     const first = page.items[0];
     expect(first?.url).toMatch(/^\/api\/media\/images\/[0-9a-f-]{36}\.jpg$/);
@@ -250,20 +250,18 @@ describe('runSeed with the real upload pipeline on fake storage (F-63, B-37, B-4
   });
 
   it('F-31: the image with 25 comments shows 20 and offers older ones; the image without comments is empty', async () => {
-    const [northSea] = await testApp.db
+    const [fans] = await testApp.db
       .select({ id: images.id })
       .from(images)
-      .where(eq(images.title, 'North Sea in October'));
-    const [coffee] = await testApp.db
+      .where(eq(images.title, 'Fans all the way down'));
+    const [tulips] = await testApp.db
       .select({ id: images.id })
       .from(images)
-      .where(eq(images.title, 'Second coffee, first idea'));
+      .where(eq(images.title, 'Tulips on petrol'));
 
-    const busy = CommentPage.parse(
-      (await request(testApp.app).get(`/api/images/${String(northSea?.id)}/comments`)).body,
-    );
+    const busy = CommentPage.parse((await request(testApp.app).get(`/api/images/${String(fans?.id)}/comments`)).body);
     const empty = CommentPage.parse(
-      (await request(testApp.app).get(`/api/images/${String(coffee?.id)}/comments`)).body,
+      (await request(testApp.app).get(`/api/images/${String(tulips?.id)}/comments`)).body,
     );
 
     expect(busy.items).toHaveLength(20);
@@ -295,19 +293,19 @@ describe('runSeed with the real upload pipeline on fake storage (F-63, B-37, B-4
 
   // Last in this block: it breaks the seeded state on purpose.
   it('checkSeed reports a missing object and a missing comment, and only reads', async () => {
-    const manifest = await readManifest(SEED_IMAGES_DIR, SeedManifest);
-    const fog = manifest.find((entry) => entry.slug === 'fog-over-the-pines');
-    const [fogRow] = await testApp.db
+    const manifest = await readManifest(SEED_IMAGES_DIR);
+    const peacock = manifest.find((entry) => entry.slug === 'peacock');
+    const [peacockRow] = await testApp.db
       .select({ id: images.id })
       .from(images)
-      .where(eq(images.objectKey, fog?.objectKey ?? ''));
+      .where(eq(images.objectKey, peacock?.objectKey ?? ''));
     const [oneComment] = await testApp.db
       .select({ id: comments.id })
       .from(comments)
-      .where(and(eq(comments.imageId, fogRow?.id ?? 0), eq(comments.ownerId, SEED_OWNER_ID)))
+      .where(and(eq(comments.imageId, peacockRow?.id ?? 0), eq(comments.ownerId, SEED_OWNER_ID)))
       .limit(1);
     await testApp.db.delete(comments).where(eq(comments.id, oneComment?.id ?? 0));
-    await storage.delete(previewKeyOf(fog?.objectKey ?? ''));
+    await storage.delete(previewKeyOf(peacock?.objectKey ?? ''));
     const callsBefore = storage.calls();
 
     const result = await checkSeed({ db: testApp.db, storage });
@@ -315,11 +313,86 @@ describe('runSeed with the real upload pipeline on fake storage (F-63, B-37, B-4
     expect(result.ok).toBe(false);
     expect(result).toMatchObject({ images: 16, comments: 59, objects: 31 });
     expect(result.problems).toEqual([
-      'comments of fog-over-the-pines: 1, expected 2',
-      `object missing: ${previewKeyOf(fog?.objectKey ?? '')}`,
+      'comments of peacock: 1, expected 2',
+      `object missing: ${previewKeyOf(peacock?.objectKey ?? '')}`,
     ]);
     expect(storage.calls().put).toBe(callsBefore.put);
     expect(storage.calls().delete).toBe(callsBefore.delete);
+  });
+});
+
+describe('runSeed after the seed pictures changed (ADR 0014 revision)', () => {
+  // Its own database: the block above leaves its seed deliberately broken.
+  let database: TestDatabase;
+  let handle: DatabaseHandle;
+  let storage: FakeStorage;
+
+  beforeAll(async () => {
+    database = await createTestDatabase();
+    handle = createDatabase(database.url, silentLogger());
+    storage = createFakeStorage();
+  });
+
+  afterAll(async () => {
+    await handle.close();
+    await database.drop();
+  });
+
+  async function insertImageRow(objectKey: string, ownerId: string, size = { width: 10, height: 10, sizeBytes: 100 }) {
+    const [row] = await handle.db
+      .insert(images)
+      .values({
+        objectKey,
+        mimeType: 'image/jpeg',
+        ...size,
+        authorName: 'Old seed',
+        title: 'Left over',
+        description: '',
+        ownerId,
+      })
+      .returning({ id: images.id });
+    return row?.id ?? 0;
+  }
+
+  it('B-44: removes seed-owner rows of an earlier seed version with their comments and objects, never visitor rows', async () => {
+    const deps = seedDeps(handle.db, storage);
+    const picture = await readFile(join(SEED_IMAGES_DIR, `${SEED_IMAGES[0]?.slug ?? ''}.jpg`));
+    const insertRow = async (objectKey: string, ownerId: string) => {
+      const stored = await deps.upload.ingest({ buffer: picture, size: picture.length }, { objectKey });
+      const id = await insertImageRow(objectKey, ownerId, stored);
+      await handle.db
+        .insert(comments)
+        .values({ imageId: id, authorName: 'Henrik', body: 'Old comment.', ownerId: SEED_OWNER_ID });
+      return id;
+    };
+    const oldKey = 'images/0b0b0b0b-0000-4000-8000-000000000001.jpg';
+    const visitorKey = 'images/0b0b0b0b-0000-4000-8000-000000000002.jpg';
+    const oldId = await insertRow(oldKey, SEED_OWNER_ID);
+    const visitorId = await insertRow(visitorKey, '7a7a7a7a-0000-4000-8000-000000000001');
+
+    const run = await runSeed(deps);
+
+    expect(run.retired).toEqual([oldKey]);
+    expect(run.inserted).toHaveLength(16);
+    expect(await handle.db.select().from(images).where(eq(images.id, oldId))).toEqual([]);
+    expect(await handle.db.select().from(comments).where(eq(comments.imageId, oldId))).toEqual([]);
+    expect(storage.keys()).not.toContain(oldKey);
+    expect(storage.keys()).not.toContain(previewKeyOf(oldKey));
+    expect(await handle.db.select({ id: images.id }).from(images).where(eq(images.id, visitorId))).toEqual([
+      { id: visitorId },
+    ]);
+    expect(storage.keys()).toContain(visitorKey);
+    expect((await checkSeed({ db: handle.db, storage })).ok).toBe(true);
+  });
+
+  it('checkSeed reports a retired seed row that is still there', async () => {
+    const leftover = 'images/0b0b0b0b-0000-4000-8000-000000000003.jpg';
+    await insertImageRow(leftover, SEED_OWNER_ID);
+
+    const result = await checkSeed({ db: handle.db, storage });
+
+    expect(result.ok).toBe(false);
+    expect(result.problems).toEqual([`retired seed row still present: ${leftover} (run db:seed)`]);
   });
 });
 
@@ -342,7 +415,7 @@ describe('checkSeed on an unseeded database', () => {
 
     expect(result).toMatchObject({ ok: false, images: 0, comments: 0, objects: 0 });
     expect(result.problems).toHaveLength(16);
-    expect(result.problems[0]).toMatch(/^row missing: fog-over-the-pines \(images\/[0-9a-f-]{36}\.jpg\)$/);
+    expect(result.problems[0]).toMatch(/^row missing: peacock \(images\/[0-9a-f-]{36}\.jpg\)$/);
   });
 });
 
@@ -367,7 +440,7 @@ describe('runSeed when the insert fails (ADR 0008 compensation)', () => {
     await database.drop();
   });
 
-  it('F-23: the run stops with the error, and the original and preview of that photo are deleted again', async () => {
+  it('F-23: the run stops with the error, and the original and preview of that picture are deleted again', async () => {
     const storage = createFakeStorage();
 
     await expect(runSeed(seedDeps(handle.db, storage))).rejects.toThrow();

@@ -19,7 +19,7 @@ import { createTestDatabase, type TestDatabase, withDatabase } from '../test-db.
 
 const ORIGINAL_KEY =
   /^images\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif)$/;
-const fields = { authorName: 'Marit', title: 'Fog over the pines', description: 'Took the early bus.' };
+const fields = { authorName: 'Marit', title: 'Iris on the axis', description: 'Mirrored down the middle.' };
 
 interface Upload {
   content: Buffer;

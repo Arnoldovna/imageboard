@@ -14,7 +14,8 @@ import type { Logger } from 'pino';
 import type { Database } from '../db/client.js';
 import { createImagesModule } from '../features/images/index.js';
 import type { ImageUploadPort } from '../shared/ports/image-upload.js';
-import { cliArgs, createScriptUploadPort, notMounted, runCli, withScriptContext } from './script-runtime.js';
+import { cliArgs, runCli } from './script-cli.js';
+import { createScriptUploadPort, notMounted, withScriptContext } from './script-runtime.js';
 
 const USAGE = 'Usage: admin:remove-image <id> --yes';
 

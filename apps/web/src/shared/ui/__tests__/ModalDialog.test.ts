@@ -21,7 +21,7 @@ afterEach(() => {
 
 function renderDialog(props: Record<string, unknown> = {}) {
   return render(ModalDialog, {
-    props: { title: 'Rooftops from the fifth floor', ...props },
+    props: { title: 'Tower at sunrise', ...props },
     slots: { default: '<p>New flat, no lift.</p>' },
     global: { plugins: [pinia] },
   });
@@ -40,9 +40,9 @@ describe('ModalDialog', () => {
     renderDialog();
 
     expect(showModal).toHaveBeenCalledTimes(1);
-    const dialog = screen.getByRole('dialog', { name: 'Rooftops from the fifth floor' });
+    const dialog = screen.getByRole('dialog', { name: 'Tower at sunrise' });
     expect(dialog.getAttribute('aria-modal')).toBe('true');
-    expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe('Rooftops from the fifth floor');
+    expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe('Tower at sunrise');
     expect(within(dialog).getByText('New flat, no lift.')).toBeTruthy();
   });
 
@@ -81,7 +81,7 @@ describe('ModalDialog', () => {
 
   it('closes on unmount without emitting and returns focus to the element focused before', () => {
     const opener = document.createElement('button');
-    opener.textContent = 'Rooftops from the fifth floor';
+    opener.textContent = 'Tower at sunrise';
     document.body.append(opener);
     opener.focus();
     const view = renderDialog();

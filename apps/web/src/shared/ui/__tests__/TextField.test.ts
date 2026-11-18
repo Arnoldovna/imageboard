@@ -34,9 +34,9 @@ describe('TextField', () => {
   });
 
   it('shows the model value', () => {
-    render(TextField, { props: { label: 'Title', modelValue: 'Fog over the pines' } });
+    render(TextField, { props: { label: 'Title', modelValue: 'Iris on the axis' } });
 
-    expect(screen.getByLabelText<HTMLInputElement>('Title').value).toBe('Fog over the pines');
+    expect(screen.getByLabelText<HTMLInputElement>('Title').value).toBe('Iris on the axis');
   });
 
   it('links hint and error through aria-describedby and marks the field invalid (F-24)', () => {

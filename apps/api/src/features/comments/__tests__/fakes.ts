@@ -101,8 +101,8 @@ export function imageRow(overrides: Partial<NewImageRow> = {}): NewImageRow {
     height: 1067,
     sizeBytes: 245_812,
     authorName: 'Sanne',
-    title: 'North Sea in October',
-    description: 'Cold enough for a hat, warm enough to sit on the dunes for an hour.',
+    title: 'Fans all the way down',
+    description: 'A repeat pattern, about six hours of compass work.',
     ownerId: randomUUID(),
     ...overrides,
   };

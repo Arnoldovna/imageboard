@@ -37,8 +37,10 @@ interval chosen and every edge meeting its neighbour exactly.
 
 - **Nine fields, newest first.** The grid holds nine images, the page size of the original 2018 gallery. The ids
   count down from `#09` to `#01`, the order the feed returns them in.
-- **The accent is the newest upload.** `#09` is the only flat sky field, captioned `new`. `#04` is a plain surface
-  field captioned `loading`, the same placeholder the app shows before an image arrives.
+- **The fields are the real seed.** Since the seed pictures were replaced by original artwork (ADR 0014), the nine
+  fields show 16:10 crops of the nine newest seed pictures, exactly as the gallery tiles crop them; `#09`, the newest,
+  keeps its `new` caption. The first version filled the fields with ruled lines and one flat sky accent; the type,
+  rules and grid of that version are unchanged.
 - **"more"** in the bottom-left corner quotes the original app's "MORE" button, which loaded the next nine images. It
   shares its baseline with the last row of captions.
 - **"01 / 03"** marks Imageboard as the first of the three rebuilt projects (Imageboard, petition, social-network).
@@ -47,10 +49,11 @@ interval chosen and every edge meeting its neighbour exactly.
 
 ## Production notes
 
-- Rendered with Playwright (Chromium, `deviceScaleFactor: 1`) from a generated HTML/SVG page, so every rule is a
+- The nine fields were composited onto the first render with sharp (cover crop, newest seed pictures). Originally
+  rendered with Playwright (Chromium, `deviceScaleFactor: 1`) from a generated HTML/SVG page, so every rule is a
   crisp 1px line on whole pixels. The cover is the same layout scaled by 1.25. Rules stay 1px and positions are
   rounded to whole pixels.
 - Font: Schibsted Grotesk 400 and 500 from `@fontsource/schibsted-grotesk` 5.3.0 (latin subset), embedded in the
   page. All characters are in the font's latin subset, so no fallback font is rendered.
-- Colours are maw tokens only: paper #FFFFFF, ink #000000, ink-muted #606060, rule #A8A8A8, surface #F2F2F2,
+- Type and rules use maw tokens only: paper #FFFFFF, ink #000000, ink-muted #606060, rule #A8A8A8, surface #F2F2F2,
   sky #B8D3F3.

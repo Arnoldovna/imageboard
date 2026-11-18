@@ -4,15 +4,9 @@ import { join, resolve } from 'node:path';
 import type { Plugin } from 'vite';
 
 // Build-time only (vite.demo.config.ts): the demo seed is the real seed of `pnpm db:seed`, read from the API's seed
-// content and photos (joined and checked exactly like `db:seed` does), so the two can never drift. The production build
+// content and pictures (joined and checked exactly like `db:seed` does), so the two can never drift. The production build
 // and the web Docker image never load this file.
-import {
-  joinSeed,
-  readManifest,
-  SEED_IMAGES_DIR,
-  SEED_OWNER_ID,
-  SeedManifest,
-} from '../../api/src/scripts/seed-content';
+import { joinSeed, readManifest, SEED_IMAGES_DIR, SEED_OWNER_ID } from '../../api/src/scripts/seed-content';
 
 export const DEMO_SEED_MODULE_ID = 'virtual:demo-seed';
 const RESOLVED_DEMO_SEED_MODULE_ID = `\0${DEMO_SEED_MODULE_ID}`;
@@ -28,7 +22,7 @@ function isStartOfFrame(marker: number): boolean {
 }
 
 /**
- * Width and height from a JPEG's start-of-frame segment. Enough for the seed photos (baseline or progressive, no
+ * Width and height from a JPEG's start-of-frame segment. Enough for the seed pictures (baseline or progressive, no
  * EXIF rotation); throws on anything that is not a well-formed JPEG, so a broken seed file fails the build.
  */
 export function jpegSize(bytes: Uint8Array): ImageSize {
@@ -56,11 +50,11 @@ export function jpegSize(bytes: Uint8Array): ImageSize {
 }
 
 /**
- * Source of `virtual:demo-seed`: one asset import per photo (`apps/api/seed/images/<slug>.jpg`, Unsplash License) plus
+ * Source of `virtual:demo-seed`: one asset import per picture (`apps/api/seed/images/<slug>.jpg`, original artwork, MIT) plus
  * the seed owner, text, sizes and comments, in upload order.
  */
 export async function demoSeedModuleSource(photosDir: string = SEED_IMAGES_DIR): Promise<string> {
-  const entries = joinSeed(await readManifest(photosDir, SeedManifest));
+  const entries = joinSeed(await readManifest(photosDir));
   const modules = await Promise.all(
     entries.map(async ({ image }, index) => {
       const path = join(photosDir, `${image.slug}.jpg`);

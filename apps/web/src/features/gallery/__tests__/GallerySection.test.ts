@@ -18,8 +18,8 @@ vi.mock('../gallery.api', () => ({ fetchImagePage: vi.fn() }));
 const fetchPage = vi.mocked(fetchImagePage);
 
 const SEED: readonly (readonly [title: string, author: string])[] = [
-  ['Rooftops from the fifth floor', 'Tomás R.'],
-  ['Fog over the pines', 'Marit'],
+  ['Tower at sunrise', 'Tomás R.'],
+  ['Iris on the axis', 'Marit'],
   ['Harbour at dawn', 'Jonas'],
   ['Allotment in late August', 'Ilse'],
   ['Tram depot, Sunday', 'Kemal'],
@@ -141,10 +141,10 @@ describe('GallerySection', () => {
 
     const links = screen.getAllByRole('link');
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['/images/2', '/images/1']);
-    const tile = screen.getByRole('link', { name: 'Fog over the pines' });
+    const tile = screen.getByRole('link', { name: 'Iris on the axis' });
     expect(tile).toBe(links[1]);
     // The title is the link's only text, so the visible label is the whole name (WCAG 2.5.3 Label in Name).
-    expect(tile.textContent.trim()).toBe('Fog over the pines');
+    expect(tile.textContent.trim()).toBe('Iris on the axis');
     const item = tile.closest('li');
     expect(item).not.toBeNull();
     if (item === null) return;

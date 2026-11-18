@@ -12,7 +12,7 @@ describe('formatDocumentTitle (F-53)', () => {
   });
 
   it('puts the page first: "<page> · Imageboard"', () => {
-    expect(formatDocumentTitle('Fog over the pines')).toBe('Fog over the pines · Imageboard');
+    expect(formatDocumentTitle('Iris on the axis')).toBe('Iris on the axis · Imageboard');
     expect(formatDocumentTitle(' Page not found ')).toBe('Page not found · Imageboard');
   });
 });
@@ -30,9 +30,9 @@ describe('useDocumentTitle', () => {
     const wrapper = mount(Page);
     expect(document.title).toBe('Imageboard');
 
-    title.value = 'Rooftops from the fifth floor';
+    title.value = 'Tower at sunrise';
     await nextTick();
-    expect(document.title).toBe('Rooftops from the fifth floor · Imageboard');
+    expect(document.title).toBe('Tower at sunrise · Imageboard');
 
     document.title = 'Page not found · Imageboard';
     wrapper.unmount();

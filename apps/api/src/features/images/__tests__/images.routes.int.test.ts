@@ -36,7 +36,7 @@ const DAY_SECONDS = 24 * 60 * 60;
 const UPLOAD_MAX_BYTES = 1024 * 1024;
 const INVALID_IDS = ['abc', '0', '-1', '1.5', '2147483648', '01', '1e3'];
 
-const validFields = { authorName: 'Marit', title: 'Fog over the pines', description: 'Took the early bus.' };
+const validFields = { authorName: 'Marit', title: 'Iris on the axis', description: 'Mirrored down the middle.' };
 
 interface UploadParts {
   fields?: Readonly<Record<string, string>>;
@@ -432,7 +432,7 @@ describe('images routes', () => {
       const owner = await agentWithSession(testApp.app);
       const { id, objectKey } = await createOwned(owner);
       await testApp.db.insert(comments).values([
-        { imageId: id, authorName: 'Henrik', body: 'Worth the early bus.', ownerId: randomUUID() },
+        { imageId: id, authorName: 'Henrik', body: 'The little curls on the stems are lovely.', ownerId: randomUUID() },
         { imageId: id, authorName: 'Bea', body: 'Exactly what I needed.', ownerId: randomUUID() },
       ]);
 

@@ -98,11 +98,11 @@ describe('useImageDetail', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(call(0).url).toBe('/api/images/16');
 
-    call(0).respond(json(imageDto(16, 'Rooftops from the fifth floor')));
+    call(0).respond(json(imageDto(16, 'Tower at sunrise')));
     await flushPromises();
 
     expect(state.value.status).toBe('ready');
-    expect(image.value?.title).toBe('Rooftops from the fifth floor');
+    expect(image.value?.title).toBe('Tower at sunrise');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -110,7 +110,7 @@ describe('useImageDetail', () => {
     const { fetchMock, call } = controllableFetch();
     const id = shallowRef(16);
     useInScope(id);
-    call(0).respond(json(imageDto(16, 'Rooftops from the fifth floor')));
+    call(0).respond(json(imageDto(16, 'Tower at sunrise')));
     await flushPromises();
 
     id.value = 16;
@@ -137,10 +137,10 @@ describe('useImageDetail', () => {
     await flushPromises();
     expect(state.value).toEqual({ status: 'loading', id: 2 });
 
-    call(1).respond(json(imageDto(2, 'Fog over the pines')));
+    call(1).respond(json(imageDto(2, 'Iris on the axis')));
     await flushPromises();
     expect(image.value?.id).toBe(2);
-    expect(image.value?.title).toBe('Fog over the pines');
+    expect(image.value?.title).toBe('Iris on the axis');
   });
 
   it('switches to loading at once when moving from a loaded image to another one', async () => {
@@ -203,9 +203,9 @@ describe('useImageDetail', () => {
     expect(state.value).toEqual({ status: 'loading', id: 16 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    call(1).respond(json(imageDto(16, 'Rooftops from the fifth floor')));
+    call(1).respond(json(imageDto(16, 'Tower at sunrise')));
     await flushPromises();
-    expect(image.value?.title).toBe('Rooftops from the fifth floor');
+    expect(image.value?.title).toBe('Tower at sunrise');
   });
 
   it('turns a failed connection into the "not available" message', async () => {
@@ -221,7 +221,7 @@ describe('useImageDetail', () => {
     const { call } = controllableFetch();
     const { state } = useInScope(shallowRef(16));
 
-    call(0).respond(json({ id: 16, title: 'Rooftops from the fifth floor' }));
+    call(0).respond(json({ id: 16, title: 'Tower at sunrise' }));
     await flushPromises();
 
     expect(state.value.status).toBe('error');

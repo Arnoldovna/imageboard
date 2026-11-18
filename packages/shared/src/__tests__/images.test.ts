@@ -10,7 +10,7 @@ const dto = {
   height: 1067,
   mimeType: 'image/jpeg',
   authorName: 'Tomás R.',
-  title: 'Rooftops from the fifth floor',
+  title: 'Tower at sunrise',
   description: 'New flat, no lift, but this view makes the stairs bearable.',
   createdAt: '2026-11-12T19:23:00.000Z',
   canDelete: false,

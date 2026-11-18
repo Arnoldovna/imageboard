@@ -15,7 +15,7 @@ import { ImageDetailDialog } from '../index';
  * The detail dialog with the real HTTP client on a stubbed `fetch`. `CommentsSection` (agent F's module) is stubbed,
  * so this feature's tests never depend on the comments feature's work in progress (ADR 0021 §2).
  */
-const TITLE = 'Rooftops from the fifth floor';
+const TITLE = 'Tower at sunrise';
 
 function imageDto(overrides: Partial<ImageDto> = {}): ImageDto {
   return {
@@ -277,10 +277,10 @@ describe('ImageDetailDialog: states', () => {
     expect(screen.queryByText('Harbour at dawn')).toBeNull();
     expect(screen.queryByRole('img')).toBeNull();
 
-    releaseB(json(imageDto({ id: 2, title: 'Fog over the pines' })));
+    releaseB(json(imageDto({ id: 2, title: 'Iris on the axis' })));
     await flushPromises();
 
-    expect(screen.getByRole('dialog', { name: 'Fog over the pines' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Iris on the axis' })).toBeTruthy();
     expect(requestsTo(fetchMock, 'GET', '/api/images/1')).toHaveLength(1);
     expect(requestsTo(fetchMock, 'GET', '/api/images/2')).toHaveLength(1);
   });

@@ -30,7 +30,7 @@ const DTO_KEYS = [
   'width',
 ];
 
-const fields = { authorName: 'Marit', title: 'Fog over the pines', description: 'Took the early bus.' };
+const fields = { authorName: 'Marit', title: 'Iris on the axis', description: 'Mirrored down the middle.' };
 const file = { buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]), size: 4 };
 
 function setup() {
@@ -125,7 +125,7 @@ describe('images service: get', () => {
     const record = repository.add({
       ownerId: owner.ownerId ?? '',
       authorName: 'Tomás R.',
-      title: 'Rooftops from the fifth floor',
+      title: 'Tower at sunrise',
       description: 'New flat, no lift.',
       createdAt: new Date('2026-11-12T19:23:00.000Z'),
     });
@@ -142,7 +142,7 @@ describe('images service: get', () => {
       height: 480,
       mimeType: 'image/png',
       authorName: 'Tomás R.',
-      title: 'Rooftops from the fifth floor',
+      title: 'Tower at sunrise',
       description: 'New flat, no lift.',
       createdAt: '2026-11-12T19:23:00.000Z',
       canDelete: true,

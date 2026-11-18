@@ -144,12 +144,12 @@ session (the SPA calls it once at start and again only after `403 csrf-invalid`)
       "id": 16,
       "url": "/api/media/images/0b9d…e1.jpg",
       "previewUrl": "/api/media/previews/0b9d…e1.webp",
-      "width": 1600,
-      "height": 1067,
+      "width": 1200,
+      "height": 1600,
       "mimeType": "image/jpeg",
-      "authorName": "Tomás R.",
-      "title": "Rooftops from the fifth floor",
-      "description": "New flat, no lift, but this view makes the stairs bearable.",
+      "authorName": "Kofi",
+      "title": "Medallion with stars",
+      "description": "A frame for a moon. The stars took longer than the moon, and the moon took longer than the frame.",
       "createdAt": "2026-11-12T19:23:00.000Z",
       "canDelete": false
     }

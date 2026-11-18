@@ -2,7 +2,7 @@
 import { ImagePage } from '@app/shared';
 import { describe, expect, it, vi } from 'vitest';
 
-import { DEMO_DB_NAME, openDemoStore } from '../demo-store';
+import { DEMO_DB_NAME, openDemoStore, seedFingerprint } from '../demo-store';
 import { demoHarness, json, pngFile, SEED, SEED_OWNER_ID, uploadForm } from './demo-fixtures';
 
 const fields = { authorName: 'Kofi', title: 'Harbour at dusk' };
@@ -35,10 +35,54 @@ describe('demo store (IndexedDB)', () => {
     ]);
     expect((await reloaded.store.comments(1)).map((comment) => comment.body)).toEqual([
       'Again.',
-      'Exactly what I needed on a Monday.',
-      'Worth the early bus.',
+      'This would make a great book cover.',
+      'The little curls on the stems are lovely.',
     ]);
     expect((await reloaded.store.state()).ownerId).toBe('visitor-1');
+  });
+
+  it('replaces what an earlier deploy stored when the seed changed, so no row points at a removed asset', async () => {
+    const first = await demoHarness();
+    await first.mutate('POST', '/api/images', { body: uploadForm(fields, pngFile()) });
+    first.store.close();
+    const newSeed = {
+      ...SEED,
+      images: SEED.images.map((image, index) => ({ ...image, url: `/imageboard/assets/new-${String(index)}.jpg` })),
+    };
+
+    const onReseeded = vi.fn();
+    const store = await openDemoStore({
+      seed: newSeed,
+      factory: first.factory,
+      newOwnerId: () => 'visitor-new',
+      onReseeded,
+    });
+
+    const images = await store.images();
+    expect(images.map((image) => image.url)).toEqual(newSeed.images.map((image) => image.url).reverse());
+    expect(await store.file(4)).toBeUndefined();
+    expect(await store.state()).toEqual({ ownerId: 'visitor-new', nextImageId: 4, nextCommentId: 3 });
+    expect(onReseeded).toHaveBeenCalledOnce();
+    store.close();
+
+    // The same seed again is no change: nothing is rewritten.
+    const quiet = vi.fn();
+    const again = await openDemoStore({
+      seed: newSeed,
+      factory: first.factory,
+      newOwnerId: () => 'visitor-other',
+      onReseeded: quiet,
+    });
+    expect((await again.state()).ownerId).toBe('visitor-new');
+    expect(quiet).not.toHaveBeenCalled();
+    again.close();
+  });
+
+  it('seedFingerprint changes with the content and is stable for equal content', () => {
+    expect(seedFingerprint(SEED)).toBe(seedFingerprint(structuredClone(SEED)));
+    expect(seedFingerprint(SEED)).toMatch(/^[0-9a-f]{8}$/);
+    const retitled = { ...SEED, images: SEED.images.map((image) => ({ ...image, title: `${image.title}!` })) };
+    expect(seedFingerprint(retitled)).not.toBe(seedFingerprint(SEED));
   });
 
   it('reset removes everything the visitor added and restores the seed with a new identity', async () => {

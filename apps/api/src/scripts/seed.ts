@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
 import type { Logger } from 'pino';
 
 import type { Database } from '../db/client.js';
@@ -18,17 +18,19 @@ import {
   SEED_TOTALS,
   type SeedEntry,
   type SeedImage,
-  SeedManifest,
 } from './seed-content.js';
 
 /*
  * `runSeed()` and `checkSeed()` (DATA-MODEL §6, ADR 0014). Neither has a guard: the `SEED_ALLOW` switch lives in the
  * entry point `seed-cli.ts`, because tests call these functions directly with their own database and fake storage.
- * The seed only inserts, restores missing seed objects and skips; it never deletes or resets anything that is there.
+ * The seed inserts, restores missing seed objects and skips. The one thing it deletes is retired seed content: images
+ * of the seed owner whose object key is no longer in the manifest (a previous version of the seed), so a database
+ * seeded before the pictures changed does not keep the old ones next to the new ones. Like any deleted image, a retired
+ * one takes its comments with it, visitors' comments included; visitors' own images are never touched.
  */
 
 async function loadSeedEntries(imagesDir: string): Promise<SeedEntry[]> {
-  return joinSeed(await readManifest(imagesDir, SeedManifest), SEED_IMAGES);
+  return joinSeed(await readManifest(imagesDir), SEED_IMAGES);
 }
 
 /**
@@ -52,9 +54,40 @@ async function bothObjectsExist(storage: ObjectStorage, objectKey: string): Prom
   return found.every(Boolean);
 }
 
-async function readSeedPhoto(imagesDir: string, slug: string): Promise<IncomingFile> {
+async function readSeedPicture(imagesDir: string, slug: string): Promise<IncomingFile> {
   const buffer = await readFile(join(imagesDir, `${slug}.jpg`));
   return { buffer, size: buffer.length };
+}
+
+/** Seed-owner rows, split into those the manifest names and those of an earlier seed version (retired). */
+async function seedOwnerRows(db: Database, manifestKeys: ReadonlySet<string>) {
+  const rows = await db
+    .select({ id: images.id, objectKey: images.objectKey })
+    .from(images)
+    .where(eq(images.ownerId, SEED_OWNER_ID));
+  return {
+    current: rows.filter((row) => manifestKeys.has(row.objectKey)),
+    retired: rows.filter((row) => !manifestKeys.has(row.objectKey)),
+  };
+}
+
+/**
+ * Deletes the retired seed images in one statement (comments go by `ON DELETE CASCADE`), then discards their objects:
+ * row first, like every delete (ADR 0008), so no row ever points at a missing object. `discard` never throws and logs
+ * an object it could not remove.
+ */
+async function retireOldSeed(
+  db: Database,
+  upload: ImageUploadPort,
+  manifestKeys: readonly string[],
+): Promise<string[]> {
+  const removed = await db
+    .delete(images)
+    .where(and(eq(images.ownerId, SEED_OWNER_ID), notInArray(images.objectKey, [...manifestKeys])))
+    .returning({ objectKey: images.objectKey });
+  const keys = removed.map((row) => row.objectKey);
+  await Promise.all(keys.map((key) => upload.discard(key)));
+  return keys;
 }
 
 async function existingKeys(db: Database, objectKeys: readonly string[]): Promise<Set<string>> {
@@ -67,7 +100,7 @@ async function existingKeys(db: Database, objectKeys: readonly string[]): Promis
 
 /**
  * Row and comments in one transaction (no storage call inside it, ADR 0008). `ON CONFLICT DO NOTHING` on the object
- * key: a concurrent seed run that inserted the same photo first wins, and this run inserts no duplicate comments.
+ * key: a concurrent seed run that inserted the same picture first wins, and this run inserts no duplicate comments.
  */
 async function insertSeedRows(db: Database, image: SeedImage, stored: StoredImage): Promise<boolean> {
   return db.transaction(async (tx) => {
@@ -105,7 +138,7 @@ async function insertSeedRows(db: Database, image: SeedImage, stored: StoredImag
 
 export interface SeedDeps {
   db: Database;
-  /** The real upload port (`createScriptUploadPort`), so seed photos get exactly the upload pipeline (ADR 0014). */
+  /** The real upload port (`createScriptUploadPort`), so seed pictures get exactly the upload pipeline (ADR 0014). */
   upload: ImageUploadPort;
   /** The storage behind `upload`; read only, to find seed rows whose objects are gone. */
   storage: ObjectStorage;
@@ -119,16 +152,20 @@ export interface SeedResult {
   /** Rows that existed without their original or preview; both objects were stored again under the same key. */
   restored: string[];
   skipped: string[];
+  /** Object keys of seed-owner rows that are not in the manifest any more; row, comments and objects were deleted. */
+  retired: string[];
 }
 
 /**
- * Idempotent demo content (F-63, DATA-MODEL §6.1). For each manifest photo in content order:
+ * Idempotent demo content (F-63, DATA-MODEL §6.1). For each manifest picture in content order:
  * - a row with its fixed object key exists and both objects are in storage → skip it (two reads, no write);
  * - the row exists but an object is missing (for example after a storage volume was reset) → ingest the file again
  *   with the same key, which stores original and preview; the row and its comments stay as they are;
  * - no row → ingest the file through the upload pipeline with that key, then insert the row and its comments with
  *   fixed dates and the seed owner. If the insert fails, the objects are discarded again, unless a row for the key
  *   exists by then (another run owns them).
+ * Then the images of an earlier seed version (seed owner, key not in the manifest) are retired with their comments
+ * and objects.
  */
 export async function runSeed({
   db,
@@ -138,11 +175,10 @@ export async function runSeed({
   imagesDir = SEED_IMAGES_DIR,
 }: SeedDeps): Promise<SeedResult> {
   const entries = await loadSeedEntries(imagesDir);
-  const present = await existingKeys(
-    db,
-    entries.map((entry) => entry.file.objectKey),
-  );
-  const result: SeedResult = { inserted: [], restored: [], skipped: [] };
+  const manifestKeys = entries.map((entry) => entry.file.objectKey);
+  const result: SeedResult = { inserted: [], restored: [], skipped: [], retired: [] };
+
+  const present = await existingKeys(db, manifestKeys);
 
   for (const { image, file } of entries) {
     const rowExists = present.has(file.objectKey);
@@ -150,7 +186,7 @@ export async function runSeed({
       result.skipped.push(image.slug);
       continue;
     }
-    const stored = await upload.ingest(await readSeedPhoto(imagesDir, image.slug), { objectKey: file.objectKey });
+    const stored = await upload.ingest(await readSeedPicture(imagesDir, image.slug), { objectKey: file.objectKey });
     if (rowExists) {
       result.restored.push(image.slug);
       logger.info({ slug: image.slug, objectKey: file.objectKey }, 'seed image objects restored');
@@ -172,8 +208,17 @@ export async function runSeed({
     logger.info({ slug: image.slug, objectKey: stored.objectKey, inserted }, 'seed image');
   }
 
+  // Last, so a run that fails on a new picture leaves the previous seed in place.
+  result.retired = await retireOldSeed(db, upload, manifestKeys);
+  if (result.retired.length > 0) logger.info({ objectKeys: result.retired }, 'retired seed images removed');
+
   logger.info(
-    { inserted: result.inserted.length, restored: result.restored.length, skipped: result.skipped.length },
+    {
+      inserted: result.inserted.length,
+      restored: result.restored.length,
+      skipped: result.skipped.length,
+      retired: result.retired.length,
+    },
     'seed finished',
   );
   return result;
@@ -204,25 +249,15 @@ async function isReachable(storage: ObjectStorage, key: string): Promise<true | 
 }
 
 /**
- * Read-only verification for `db:seed:check` (CI `dev-setup-smoke`): every manifest photo has its row (seed owner),
+ * Read-only verification for `db:seed:check` (CI `dev-setup-smoke`): every manifest picture has its row (seed owner),
  * each row has exactly its comments by the seed owner (visitors' comments on demo images do not count), and both its
- * original and its preview are reachable in storage. Writes nothing.
+ * original and its preview are reachable in storage; no seed-owner row of an earlier seed version is left. Writes nothing.
  */
 export async function checkSeed({ db, storage, imagesDir = SEED_IMAGES_DIR }: SeedCheckDeps): Promise<SeedCheckResult> {
   const entries = await loadSeedEntries(imagesDir);
   const problems: string[] = [];
-  const rows = await db
-    .select({ id: images.id, objectKey: images.objectKey })
-    .from(images)
-    .where(
-      and(
-        eq(images.ownerId, SEED_OWNER_ID),
-        inArray(
-          images.objectKey,
-          entries.map((entry) => entry.file.objectKey),
-        ),
-      ),
-    );
+  const { current: rows, retired } = await seedOwnerRows(db, new Set(entries.map((entry) => entry.file.objectKey)));
+  for (const row of retired) problems.push(`retired seed row still present: ${row.objectKey} (run db:seed)`);
   const idByKey = new Map(rows.map((row) => [row.objectKey, row.id]));
   const commentCounts =
     rows.length === 0

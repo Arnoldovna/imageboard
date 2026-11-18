@@ -17,7 +17,7 @@ describe('jpegSize', () => {
     expect(jpegSize(MINIMAL_JPEG)).toEqual({ width: 1920, height: 1080 });
   });
 
-  it('reads every real seed photo', async () => {
+  it('reads every real seed picture', async () => {
     for (const image of SEED_IMAGES) {
       const size = jpegSize(await readFile(join(SEED_IMAGES_DIR, `${image.slug}.jpg`)));
       expect(size.width, image.slug).toBeGreaterThan(0);

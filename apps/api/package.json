@@ -11,7 +11,7 @@
     "db:migrate": "tsx --conditions=development --env-file-if-exists=../../.env src/db/migrate.ts",
     "db:seed": "SEED_ALLOW=true tsx --conditions=development --env-file-if-exists=../../.env src/scripts/seed-cli.ts",
     "db:seed:check": "tsx --conditions=development --env-file-if-exists=../../.env src/scripts/seed-cli.ts --check",
-    "seed:fetch-images": "tsx --conditions=development --env-file-if-exists=../../.env src/scripts/fetch-seed-images.ts",
+    "seed:generate-art": "tsx --conditions=development src/scripts/generate-seed-art.ts",
     "admin:remove-image": "tsx --conditions=development --env-file-if-exists=../../.env src/scripts/admin-remove-image.ts",
     "db:studio": "drizzle-kit studio"
   },

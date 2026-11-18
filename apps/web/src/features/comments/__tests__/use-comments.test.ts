@@ -6,7 +6,7 @@ import { effectScope, shallowRef, type EffectScope } from 'vue';
 
 import { useComments } from '../use-comments';
 
-// --- fixtures (seed-like comments on "North Sea in October", image 6) -----------------------------------------------
+// --- fixtures (seed-like comments on "Fans all the way down", image 6) -------------------------------------------
 
 function comment(id: number, overrides: Partial<CommentDto> = {}): CommentDto {
   return {
