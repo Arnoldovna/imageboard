@@ -18,7 +18,7 @@ RUN pnpm --filter "@app/web..." run build
 
 # Unprivileged nginx (uid 101, listens on 8080). Serves the SPA and proxies /api to the api service.
 # The image's entrypoint renders /etc/nginx/templates/*.template with envsubst into /etc/nginx/conf.d/ at start.
-FROM nginxinc/nginx-unprivileged:1.30-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03 AS runtime
+FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e AS runtime
 # Keep API_MAX_BODY_SIZE slightly above UPLOAD_MAX_BYTES so the API, not nginx, answers 413 (ADR 0013).
 # CSP_IMG_SRC_EXTRA: extra img-src origins (a CDN later, ADR 0019); empty = same origin only.
 # TRUSTED_PROXY_CIDR: address range of a TLS-terminating load balancer whose X-Forwarded-Proto nginx keeps (ADR 0019).
