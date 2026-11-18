@@ -10,8 +10,8 @@ import { useGalleryStore } from '../gallery.store';
  * path and query, schema validation and problem+json mapping.
  */
 const TITLES = [
-  'Rooftops from the fifth floor',
-  'Fog over the pines',
+  'Tower at sunrise',
+  'Iris on the axis',
   'Harbour at dawn',
   'Allotment in late August',
   'Tram depot, Sunday',

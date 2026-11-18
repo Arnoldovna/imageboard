@@ -18,8 +18,8 @@ import { detailDialog, galleryRegion, IMAGES_PATH, tileLink, uploadToggle } from
 
 const OUT = process.env['MEDIA_OUT_DIR'] ?? 'docs/media';
 const RAW = path.join(OUT, 'raw');
-const UPLOAD_FILE = 'apps/api/seed/images/fog-over-the-pines.jpg';
-const UPLOAD_TITLE = 'Pines after the rain';
+const UPLOAD_FILE = 'apps/api/seed/images/iris-on-the-axis.jpg';
+const UPLOAD_TITLE = 'Iris, second try';
 const VIEWPORTS = {
   desktop: { width: 1440, height: 900 },
   mobile: { width: 390, height: 844 },
@@ -113,7 +113,7 @@ test('@media upload flow clip', async ({ browser }) => {
     recordVideo: { dir: RAW, size: VIEWPORTS.desktop },
   });
   // Set from the 201 until the UI has deleted the image again; `finally` removes it when a step in between fails, so
-  // a failed run never leaves a second "Pines after the rain" in the demo data (and in the next screenshots).
+  // a failed run never leaves a second "Iris, second try" in the demo data (and in the next screenshots).
   let uploadedId: number | undefined;
   try {
     const page = await context.newPage();
@@ -134,7 +134,7 @@ test('@media upload flow clip', async ({ browser }) => {
     await form.getByLabel('Title', { exact: true }).pressSequentially(UPLOAD_TITLE, { delay: 45 });
     await form
       .getByLabel('Description (optional)', { exact: true })
-      .pressSequentially('Same trail as last week, different weather.', { delay: 25 });
+      .pressSequentially('Same iris, one more evening.', { delay: 25 });
     await form.locator('input[type="file"]').setInputFiles(UPLOAD_FILE);
     await hold(page, 900);
     const uploaded = page.waitForResponse(

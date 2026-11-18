@@ -293,8 +293,10 @@ exported so `test/seed.int.test.ts` can run it twice against its own Testcontain
 - Runs only with an explicit `SEED_ALLOW=true` (set by the `db:seed` script; conventions §8). The check is in the
   entry point: `seed-cli.ts` exports `seedMode(argv, env)` → `'seed' | 'check'`, which throws for a write run without
   `SEED_ALLOW === 'true'`. `main()` runs only under `if (import.meta.main)`. `seed.int.test.ts` asserts the refusal,
-  and that `--check` needs no switch. `NODE_ENV` is never consulted. `SEED_ALLOW` is not an `.env` key. The seed never
-  deletes or resets anything. It needs no secrets beyond the normal `.env` (no demo password, no accounts).
+  and that `--check` needs no switch. `NODE_ENV` is never consulted. `SEED_ALLOW` is not an `.env` key. The seed resets
+  nothing; the only rows it deletes are seed-owner images whose key is no longer in the manifest (retired seed content, ADR
+  0014), after the current pictures are in place and together with their comments; `db:seed:check` reports any that
+  are left. It needs no secrets beyond the normal `.env` (no demo password, no accounts).
 - **Idempotent**: each seed image has a fixed object key (UUID v4 generated once and committed in
   `manifest.json`). For each entry: if a row with that `object_key` exists and both its objects are in storage, skip
   it (two reads, no write); if the row exists but its original or preview is missing (for example after the MinIO
@@ -309,99 +311,93 @@ exported so `test/seed.int.test.ts` can run it twice against its own Testcontain
   21 Sep 2026 to 12 Nov 2026, at plausible local times; comments are 10 minutes to 3 days after their image.
 - Images live in the bucket; nothing points at third-party URLs at runtime (B-44).
 
-### 6.2 Seed images: source, licence, attribution
+### 6.2 Seed images: origin, licence, generation
 
-- Source: **Lorem Picsum** (`picsum.photos`), which serves photographs from Unsplash. Each photo is under the
-  [Unsplash License](https://unsplash.com/license) (free to use, attribution not required). We attribute anyway.
-- One-off fetch: `pnpm --filter @app/api seed:fetch-images` runs `src/scripts/fetch-seed-images.ts`, which reads
-  the list of chosen Picsum ids from `seed/images/manifest.json`, calls `https://picsum.photos/id/<id>/info`
-  (author, Unsplash URL), downloads `download_url`, resizes to ≤ 1600 px long edge (JPEG q80, metadata stripped)
-  and writes `seed/images/<slug>.jpg` plus the author/source fields back into the manifest. The output is
-  **committed** (about 16 × 250 KB); `db:seed` itself works offline. The script is run once by the phase-2.4 agent;
-  if picsum.photos is unreachable from the build environment, the fallback in ADR 0014 applies.
-- Selection criteria (maw "real content", anti-AI-look): ordinary, personal-feeling photographs (landscapes,
-  streets, weather, animals, objects on a table). No posed business people, no laptops-with-coffee stock look, no
-  recognisable faces, no logos or brands, nothing AI-generated. The builder browses
-  `https://picsum.photos/v2/list?page=<n>&limit=100`, picks one id per slot in §6.4 that fits the subject, and
-  **adjusts the title/description to what is actually in the photo** (the subjects below are briefs, not claims).
-- `seed/images/CREDITS.md` (generated from the manifest) lists: file, title, photographer, Unsplash URL, Picsum id,
-  licence. The README links it in its credits section.
+- The sixteen pictures are **original artwork drawn in code**, inspired by Art Nouveau (Jugendstil) and Art Deco in
+  general: botanical motifs on a vertical axis (iris, tulip, lotus, whiplash stems), repeats and friezes, framed
+  medallions, a thin blue line drawing, Deco geometry (sunbursts, ziggurats, fans, thin gold on black) and a few
+  reduced bold graphics (a mirrored black ink form on red-orange). Matte palette with a light paper grain. Nothing is downloaded, traced or copied, no named artist's style is imitated, no AI image service is
+  used, and no picture contains text. ADR [0014](./adr/0014-seed-content.md).
+- Licence: part of this repository, MIT like the code. `seed/images/CREDITS.md` (generated) says so and lists file,
+  title and size; the README links it in its credits section.
+- Generation: `pnpm --filter @app/api seed:generate-art` runs `src/scripts/generate-seed-art.ts`. Each piece in
+  `src/scripts/seed-art/pieces.ts` is a function of its canvas and its own seeded random source (`seed-art/svg.ts`
+  holds the SVG helpers and the PRNG). sharp renders the SVG and writes `seed/images/<slug>.jpg` (long edge 1600 px,
+  JPEG q82, no metadata). The generator refuses to write anything unless artwork, content (§6.4) and manifest name the
+  same slugs in the same order. The output is **committed** (about 2 MB); `db:seed` and the Pages demo work offline.
+- Formats are mixed (portrait 3:4 and 2:3, landscape 3:2, 16:10 and 16:9, square). The gallery shows a centred 16:10
+  crop, so portrait pieces keep their subject in the middle band; the detail dialog shows the whole picture.
 
 `manifest.json` entry shape (validated with Zod in the seed script):
 
 ```json
 {
-  "slug": "fog-over-the-pines",
-  "picsumId": 0,
-  "objectKey": "images/3f6d2c1e-8a4b-4c1d-9e2f-0a1b2c3d4e5f.jpg",
-  "author": "filled by fetch script",
-  "sourceUrl": "filled by fetch script (unsplash.com/photos/…)",
-  "licence": "Unsplash License",
-  "fetchedAt": "2026-11-16"
+  "slug": "peacock",
+  "objectKey": "images/4641e8a6-63eb-4e17-ada2-6646e21fae81.jpg"
 }
 ```
-
-(`picsumId` and `objectKey` above are placeholders; the builder chooses real ids and generates the UUIDs once.)
 
 ### 6.3 Seed authors
 
 Display names are free text in this product, so seeds use the kind of names people actually type: `Marit`,
 `Tomás R.`, `wen`, `Jonas from Leipzig`, `Kofi`, `Anouk`, `Pavel`, `Lucía`, `Ines K.`, `Noor`, `Henrik`, `Bea`,
-`ole_b`, `Sanne`, `Dariusz`, `Yuki`. No "Jane Doe", no "Acme", no lorem.
+`ole_b`, `Sanne`, `Dariusz`, `Yuki`. No "Jane Doe", no "Acme", no lorem. The fiction: people sharing their own
+illustrations and prints.
 
 ### 6.4 Seed content (16 images, 60 comments)
 
-Dates are `created_at` in UTC. "Comments" lists author → body, oldest first (the API shows newest first).
+Dates are `created_at` in UTC. "Comments" lists author → body, oldest first (the API shows newest first). The source
+of truth is `src/scripts/seed-content.ts`; this table mirrors it.
 
-| #   | Slug / subject brief                                                     | Title                                 | Author             | Description                                                                                               | Date (UTC)        | Comments                                                                                                                                                    |
-| --- | ------------------------------------------------------------------------ | ------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `fog-over-the-pines` — mist in a conifer forest                          | Fog over the pines                    | Marit              | Took the early bus out of town just for this. Twenty minutes later the sun burned it all off.             | 21 Sep 2026 06:42 | Henrik → "Worth the early bus." · Bea → "This is exactly what I needed on a Monday."                                                                        |
-| 2   | `last-train-gone` — empty street, station or square at night with lights | Last train already gone               | Jonas from Leipzig | Walking home it is, then. The station is very quiet after one.                                            | 24 Sep 2026 23:58 | Noor → "The fog under those lamps is lovely." · Pavel → "Been there. Many times." · Jonas from Leipzig → "Forty minutes on foot, for the record."           |
-| 3   | `second-coffee` — a cup or mug on a table                                | Second coffee, first idea             | wen                | Corner table at the café, no meetings until eleven.                                                       | 27 Sep 2026 09:15 | (none: shows the empty comments state)                                                                                                                      |
-| 4   | `dog-refuses-to-pose` — a dog                                            | Bruno refuses to pose                 | Anouk              | This was attempt number nine. He knew exactly what I wanted and did the opposite.                         | 30 Sep 2026 17:20 | Lucía → "Attempt nine is the winner though." · Kofi → "Give Bruno a treat from me." · Anouk → "He got two." · Sanne → "That look."                          |
-| 5   | `lake-twice` — still mountain lake with reflection                       | The ridge, twice                      | Henrik             | No wind at all for about ten minutes, so the lake did the rest.                                           | 3 Oct 2026 07:05  | Marit → "Where is this? I want to go." · Henrik → "Two hours by train, then a long walk uphill."                                                            |
-| 6   | `north-sea-october` — sea, beach or coastline                            | North Sea in October                  | Sanne              | Cold enough for a hat, warm enough to sit on the dunes for an hour.                                       | 6 Oct 2026 15:31  | **25 comments** (see §6.5; demonstrates "Show older comments")                                                                                              |
-| 7   | `long-way-round` — bicycle, road or path                                 | Commute, the long way round           | Kofi               | Added four kilometres to the ride home because the evening was too good to waste.                         | 9 Oct 2026 18:47  | Dariusz → "Best kind of detour." · Yuki → "Is that the river path?" · Kofi → "Yes, the stretch after the old mill."                                         |
-| 8   | `balconies` — building facade, windows, architecture                     | Balconies all the way down            | Lucía              | Leaned out of a friend's window for this. Half the town was walking below.                                | 12 Oct 2026 11:02 | Ines K. → "Third row, second from the left. That one."                                                                                                      |
-| 9   | `before-the-storm` — field, meadow or open landscape under a big sky     | Before the storm                      | Dariusz            | It started raining about five minutes after this. I was not dressed for it.                               | 15 Oct 2026 16:10 | ole_b → "The colour of that sky." · Dariusz → "Soaked to the bone, still worth it."                                                                         |
-| 10  | `library-card` — books, shelves or a reading place                       | Library card renewed after six years  | Ines K.            | They still had my old address. Starting with something short.                                             | 18 Oct 2026 13:44 | Bea → "What did you pick?" · Ines K. → "Something with very small print, due in three weeks." · wen → "Libraries are the best."                             |
-| 11  | `bridge-in-the-fog` — bridge, river, rain or fog                         | Bridge in the fog                     | Pavel              | Could not see the other bank this morning. One runner, otherwise just me.                                 | 22 Oct 2026 08:26 | Anouk → "Moody in the best way."                                                                                                                            |
-| 12  | `first-snow` — snow on mountains or trees                                | First snow on the peaks               | Yuki               | Overnight, without any warning. Down in the valley it was still raining.                                  | 26 Oct 2026 07:58 | Henrik → "Early this year." · Marit → "Skis are coming out of the cellar." · Yuki → "Not yet, give it a month."                                             |
-| 13  | `borrowed-view` — flowers or plants                                      | The neighbour's garden, borrowed view | Bea                | I have no garden, but my kitchen window looks onto this. Found the photo from April and it cheered me up. | 30 Oct 2026 10:12 | Lucía → "Best kind of garden: someone else waters it." · Bea → "Exactly my philosophy."                                                                     |
-| 14  | `low-tide` — rocks, shore or water texture                               | Rocks at low tide                     | ole_b              | The water came back faster than I expected. Wet shoes all the way home.                                   | 3 Nov 2026 14:39  | Sanne → "Classic." · Noor → "Lovely textures."                                                                                                              |
-| 15  | `no-other-cars` — road through a landscape                               | The road with no other cars           | Noor               | Saw maybe three cars in an hour. Stopped in the middle of the road for this one.                          | 7 Nov 2026 12:05  | Tomás R. → "Careful out there." · Noor → "Checked twice, promise." · Kofi → "Where does it go?" · Noor → "To a very small village with a very good bakery." |
-| 16  | `fifth-floor` — rooftops, skyline or view from above                     | Rooftops from the fifth floor         | Tomás R.           | New flat, no lift, but this view makes the stairs bearable.                                               | 12 Nov 2026 19:23 | Jonas from Leipzig → "Congratulations on the new place." · Pavel → "Five floors builds character." · Tomás R. → "Thank you both. Ask me again in winter."   |
+| #   | Slug / picture, size (px)                                                              | Title                         | Author             | Description                                                                                                          | Date (UTC)        | Comments                                                                                                                                                             |
+| --- | -------------------------------------------------------------------------------------- | ----------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `peacock` — peacock with a fan tail on a stepped plinth, 1600×1600                     | Peacock                       | ole_b              | Every feather is the same shape, which makes it much easier than it looks.                                           | 21 Sep 2026 06:42 | Sanne → "Easier than it looks, he says." · Noor → "The gold on black is beautiful."                                                                                  |
+| 2   | `liner-at-sunset` — ocean liner, banded sun, scalloped sea, 1600×1067                  | Liner at sunset               | Yuki               | My grandfather worked on ships like this. Three funnels, because he always said the good ones had three.             | 24 Sep 2026 23:58 | Henrik → "Your grandfather was right." · Marit → "The waves are so neat." · Yuki → "Rows of half circles and a lot of patience."                                     |
+| 3   | `tulips-on-petrol` — tulip wallpaper repeat on petrol, 1600×1600                       | Tulips on petrol              | wen                | A wallpaper repeat I wanted to draw since I saw tiles like this in an old stairwell. Every other column is mirrored. | 27 Sep 2026 09:15 | (none: shows the empty comments state)                                                                                                                               |
+| 4   | `lighthouse-for-my-brother` — striped lighthouse, beams, scalloped waves, 1200×1600    | Lighthouse for my brother     | Anouk              | He keeps a photo of the real one on his fridge, so this one is for next to it. Red and white, like the original.     | 30 Sep 2026 17:20 | Lucía → "He is going to love it." · Kofi → "The beams are great." · Anouk → "He already asked for a second one for the hallway." · Sanne → "Those little waves."     |
+| 5   | `door-i-would-like` — stepped doorway with a sunburst arch, 1067×1600                  | The door I would like to have | Henrik             | Drew the sunburst first and built the door around it. Our real front door is brown and sticks in winter.             | 3 Oct 2026 07:05  | Marit → "Where is this? I want to live there." · Henrik → "Only in my sketchbook, sadly."                                                                            |
+| 6   | `fans-all-the-way-down` — fan/scallop repeat pattern, 1600×1600                        | Fans all the way down         | Sanne              | A repeat pattern, about six hours of compass work. In my head it is already wallpaper.                               | 6 Oct 2026 15:31  | **25 comments** (see §6.5; demonstrates "Show older comments")                                                                                                       |
+| 7   | `tower-at-sunrise` — ziggurat tower in front of a sunburst, 1200×1600                  | Tower at sunrise              | Tomás R.           | New flat, no lift, and a lot of time spent looking at the tower across the road. It is less golden in real life.     | 9 Oct 2026 18:47  | Jonas from Leipzig → "Congratulations on the new place." · Pavel → "Less golden, but still good?" · Tomás R. → "Ask me again in winter."                             |
+| 8   | `antelope-mid-leap` — geometric antelope across a striped sun, 1200×1600               | Antelope, mid-leap            | Lucía              | The legs were the hard part. Version eleven is the first one that looks like it could land.                          | 12 Oct 2026 11:02 | Ines K. → "The stripes across the sun are perfect."                                                                                                                  |
+| 9   | `leaf-net-in-blue` — thin blue line branch with leaf veins, red dots, 1600×1067        | Leaf net in blue              | Dariusz            | One blue pen, one branch, no plan. The red dots came later, when it looked too tidy.                                 | 15 Oct 2026 16:10 | ole_b → "The red dots make it." · Dariusz → "They were almost a mistake. Kept them."                                                                                 |
+| 10  | `fountain-in-the-courtyard` — tiered fountain with arcing jets under arches, 1200×1600 | Fountain in the courtyard     | Ines K.            | Based on the one in the library courtyard, with a bit more ambition. The real one has two jets.                      | 18 Oct 2026 13:44 | Bea → "Which library?" · Ines K. → "The old one by the river. Go in spring, when it is switched on." · wen → "Libraries are the best."                               |
+| 11  | `gold-on-black` — thin gold-line panel: chevrons, medallion, fan, 1067×1600            | Gold on black                 | Pavel              | One colour of ink, a ruler and most of the weekend.                                                                  | 22 Oct 2026 08:26 | Anouk → "So much patience in this."                                                                                                                                  |
+| 12  | `lotus-frieze` — lotus frieze with budding tendrils and borders, 1600×900              | Lotus frieze                  | Jonas from Leipzig | Meant as a border for the top of a wall. Four flowers, then it repeats, in theory forever.                           | 26 Oct 2026 07:58 | Noor → "The buds curling between the flowers!" · Pavel → "Very calm. I like the water lines." · Jonas from Leipzig → "Took four tries to get the repeat to line up." |
+| 13  | `red-and-black-folded` — mirrored black ink form on red-orange, 1600×1600              | Red and black, folded         | Bea                | Print club this week: black ink on red paper, folded in half while it was wet. Everyone made one, I kept mine.       | 30 Oct 2026 10:12 | Lucía → "It looks like a face. Or a moth." · Bea → "Everyone sees something else. That is the fun."                                                                  |
+| 14  | `iris-on-the-axis` — symmetric iris with whiplash stems in an arched frame, 1067×1600  | Iris on the axis              | Marit              | Everything mirrored down the middle, except my patience. The curls on the stems took the longest.                    | 3 Nov 2026 14:39  | Henrik → "The little curls on the stems are lovely." · Bea → "This would make a great book cover."                                                                   |
+| 15  | `night-train-south` — streamline train under a ringed moon, 1600×1000                  | Night train south             | Noor               | Sketched on the actual night train, then drawn again at home on a table that did not shake.                          | 7 Nov 2026 12:05  | Tomás R. → "Where were you going?" · Noor → "Vienna. Slept surprisingly well." · Kofi → "The moon is great." · Noor → "It followed us most of the night."            |
+| 16  | `medallion-with-stars` — oval medallion with moon, stars and corner emblems, 1200×1600 | Medallion with stars          | Kofi               | A frame for a moon. The stars took longer than the moon, and the moon took longer than the frame.                    | 12 Nov 2026 19:23 | Dariusz → "The chevron borders are great." · Yuki → "Is the lotus at the bottom on purpose?" · Kofi → "Yes, it looked empty without it."                             |
 
 That is 16 images, 35 comments in the table plus 25 on image 6 = **60 comments**. Image 3 has none (empty state).
 
-### 6.5 Comments for "North Sea in October" (image 6)
+### 6.5 Comments for "Fans all the way down" (image 6)
 
 Twenty-five comments, so the first page (20) shows a "Show older comments" button. Times start at
 6 Oct 2026 15:52 and step forward irregularly (8 to 190 minutes) over three days.
 
-1. Marit → "The light on that grass is doing a lot of work."
-2. Kofi → "Which beach is this?"
-3. Sanne → "A long way past the last car park. Worth the walk."
-4. Kofi → "Noted for next year."
-5. Henrik → "The light up there in autumn is something else."
-6. Bea → "I can almost hear the wind."
-7. Pavel → "Hat weather indeed."
-8. Lucía → "We went in September and it was already freezing."
-9. Sanne → "Still saw two people swimming. Brave."
-10. Dariusz → "Brave or something else."
-11. Noor → "This makes me want to book a train ticket right now."
-12. wen → "Do it."
-13. Ines K. → "The grass on the dunes looks almost silver."
-14. Yuki → "Are those waves as cold as they look?"
-15. Sanne → "Colder. I only went in up to my ankles."
-16. ole_b → "Good composition, the path leads you straight into the waves."
-17. Anouk → "Bruno would lose his mind on that beach."
-18. Sanne → "Bring him, there were dogs everywhere."
+1. Marit → "This must have taken forever."
+2. Kofi → "Is it drawn by hand?"
+3. Sanne → "Compass, pencil and a lot of tea. Coloured on the computer afterwards."
+4. Kofi → "Respect."
+5. Henrik → "From far away it looks like fish scales."
+6. Bea → "I would wear this as a dress."
+7. Pavel → "Wallpaper, definitely."
+8. Lucía → "My grandmother had tiles like this in her bathroom."
+9. Sanne → "Then I need to see that bathroom."
+10. Dariusz → "The gold rows are my favourite."
+11. Noor → "I keep finding new patterns in it."
+12. wen → "Same. Diagonals now."
+13. Ines K. → "Could you print it on fabric?"
+14. Yuki → "How many fans are there?"
+15. Sanne → "I stopped counting at a hundred."
+16. ole_b → "The thin black outline on each one is what makes it work."
+17. Anouk → "This would make a very good blanket."
+18. Sanne → "Working on it, actually."
 19. Tomás R. → "Saving this as my wallpaper, hope that is fine."
 20. Sanne → "Of course."
-21. Jonas from Leipzig → "Fish sandwich afterwards, I hope."
-22. Sanne → "Two. It was cold."
-23. Marit → "Correct decision."
+21. Jonas from Leipzig → "Bring it to the print club, they would love it."
+22. Sanne → "In two colours? That would be a challenge."
+23. Marit → "You like a challenge."
 24. Henrik → "Coming back to this one a lot."
 25. Lucía → "Same. It is very calm to look at."
 

@@ -339,7 +339,7 @@ anonymous sessions instead:
 
 ## 12. Developer experience and seed data
 
-- **F-63** (new) [A]: `pnpm db:seed` creates idempotent demo content: ≥ 15 images (own or openly licensed photos,
+- **F-63** (new) [A]: `pnpm db:seed` creates idempotent demo content: ≥ 15 images (own or openly licensed pictures,
   with the licence noted in the repo) uploaded to local MinIO, with comments. It never points at third-party
   buckets (B-44).
 - **F-64** (new): `pnpm dev` starts the API and web app against Docker Compose (Postgres, Redis, MinIO) using only

@@ -267,10 +267,11 @@ One agent, run by the orchestrator after the wave (a between-waves step, so the 
 Files: `apps/api/test/flows/{upload-flow,delete-flow}.int.test.ts`, `apps/api/test/rate-limits.int.test.ts`,
 `apps/api/test/seed.int.test.ts` (idempotency plus `seedMode`: a write run without `SEED_ALLOW` refuses, `--check`
 needs none), `apps/api/test/admin-remove-image.int.test.ts`,
-`apps/api/src/scripts/{seed,seed-cli,seed-content,fetch-seed-images,admin-remove-image}.ts` (`seed-cli.ts` replaces
+`apps/api/src/scripts/{seed,seed-cli,seed-content,generate-seed-art,admin-remove-image}.ts` + `seed-art/*.ts` (`seed-cli.ts` replaces
 the 1a stub), `apps/api/seed/images/*` (+ `manifest.json`, `CREDITS.md`), `apps/api/package.json`: `db:seed` already
-exists from 1a (`SEED_ALLOW=true …`). Add `db:seed:check`, `seed:fetch-images` and `admin:remove-image`, all as
-`tsx --conditions=development --env-file-if-exists=../../.env src/scripts/<file>.ts` (ADR 0014).
+exists from 1a (`SEED_ALLOW=true …`). Add `db:seed:check`, `seed:generate-art` and `admin:remove-image`, all as
+`tsx --conditions=development [--env-file-if-exists=../../.env] src/scripts/<file>.ts` (ADR 0014; the art generator
+needs no env).
 
 Also `.github/workflows/ci.yml`: add the step `pnpm --filter @app/api db:seed:check` to `dev-setup-smoke`, after the
 second `pnpm dev:setup`.

@@ -11,20 +11,20 @@ features and every problem I found in the old code fixed.
 **Live-Demo:** [arnoldovna.github.io/imageboard](https://arnoldovna.github.io/imageboard/). It goes live once this
 repository is public (GitHub Pages is free for public repositories only). The demo is the real frontend, but its API
 runs in your browser (Mock Service Worker, data in IndexedDB): uploads and comments never leave your browser, and
-"reset demo" restores the seeded photos.
+"reset demo" restores the seeded pictures.
 
-![Gallery on a 1440 px wide screen: the "imageboard" heading, a collapsed "upload an image" bar and two rows of four photo tiles, each with its title, author name and date](docs/media/desktop-light.png)
+![Gallery on a 1440 px wide screen: the "imageboard" heading, a collapsed "upload an image" bar and two rows of four tiles with Art Nouveau and Art Deco inspired illustrations, each with its title, author name and date](docs/media/desktop-light.png)
 
-| Mobile (390 px)                                                                                              | Dark mode (follows the system setting)                                             |
-| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| ![The gallery on a phone: one photo per row, title and author under each photo](docs/media/mobile-light.png) | ![The same gallery in dark mode: white text on black](docs/media/desktop-dark.png) |
+| Mobile (390 px)                                                                                                  | Dark mode (follows the system setting)                                             |
+| ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| ![The gallery on a phone: one picture per row, title and author under each picture](docs/media/mobile-light.png) | ![The same gallery in dark mode: white text on black](docs/media/desktop-dark.png) |
 
 Upload, open, delete: the uploaded image becomes the first tile, opens in a dialog with its own URL, and only the
 session that uploaded it sees "delete image".
 
 ![Recording: filling in name, title and description, choosing a photo, uploading it, opening the new tile and deleting it after a confirmation dialog](docs/media/upload-flow.gif)
 
-![Detail dialog of "The road with no other cars" scrolled to its comments: the comment form with name and comment fields, then four comments, newest first, each with author and time](docs/media/desktop-detail-light.png)
+![Detail dialog of "Night train south" scrolled to its comments: the comment form with name and comment fields, then four comments, newest first, each with author and time](docs/media/desktop-detail-light.png)
 
 ## Features
 
@@ -102,7 +102,7 @@ Before I wrote any new code, I read the old project file by file and wrote down 
 | A failing query left the request hanging; `GET /image/more/abc` could crash the server        | Zod validates params, query and body; every error ends as a problem+json response                              |
 | `DELETE FROM images CASCADE` (Postgres reads `CASCADE` as a table alias) plus a second delete | `ON DELETE CASCADE` and one `DELETE` in a transaction                                                          |
 | "More" assumed the oldest image had id 1, so it never went away once that image was deleted   | The server returns `nextCursor`; the button only exists while there is a next page                             |
-| `DROP TABLE` scripts, seed images in someone else's bucket                                    | Drizzle migrations, an idempotent seed with openly licensed photos in the repo                                 |
+| `DROP TABLE` scripts, seed images in someone else's bucket                                    | Drizzle migrations, an idempotent seed with original artwork generated in the repo                             |
 | File input hidden with `display: none`, modal as a `div`, `outline: 0`                        | Keyboard-reachable file input, native `<dialog>` with focus handling, `:focus-visible` rings, axe in e2e       |
 | ID selectors, one button style copied four times, greys `rgb(157…)` next to `rgb(159…)`       | Design tokens, BEM, Stylelint rules for both                                                                   |
 | Node 8, Vue 2 development build copied into `public/`, an S3 client that signs with SigV2     | Node 26, Vue 3 built by Vite, AWS SDK v3                                                                       |
@@ -122,7 +122,7 @@ Left out on purpose: accounts, a moderation UI (there is a removal script,
 
 Requirements: Node 26 (`.nvmrc`), pnpm 10.34.9 (`npm i -g pnpm@10.34.9`), Docker with Compose 2.24.4 or newer.
 
-Try it (production images with seeded photos and comments):
+Try it (production images with seeded pictures and comments):
 
 ```bash
 pnpm install
@@ -197,13 +197,12 @@ dependencies and SHA-pinned actions current.
 
 - Typeface: Schibsted Grotesk by the Schibsted Grotesk Project Authors, SIL Open Font License 1.1 (see
   [LICENSES/OFL-SchibstedGrotesk.txt](LICENSES/OFL-SchibstedGrotesk.txt)). Self-hosted via @fontsource.
-- Seed photographs: 16 photos from [Unsplash](https://unsplash.com) under the
-  [Unsplash License](https://unsplash.com/license), fetched through [Lorem Picsum](https://picsum.photos). The
-  photographers are Jay Mantri, Robin Röcker, Carli Jean, Yamon Figurs, Alberto Restifo, Aleksandra Boguslawska,
-  Sam Wheeler, Oscar Nilsson, Crucifix Jean-Luc, Alejandro Escamilla, Liane Metzler, Sylwia Bartyzel, Leigh
-  Kendell, Lee Miller, Bec Brown and Igor Ovsyannykov; each photo's source link is in
-  [`apps/api/seed/images/CREDITS.md`](apps/api/seed/images/CREDITS.md). The recording above re-uploads one of them
-  (Jay Mantri's) under a new title.
+- Seed pictures: 16 original illustrations inspired by Art Nouveau and Art Deco (botanical motifs, repeats,
+  medallions, Deco geometry and a few bold graphics), drawn
+  in code by [`apps/api/src/scripts/generate-seed-art.ts`](apps/api/src/scripts/generate-seed-art.ts) and rendered
+  with sharp. No downloads, no tracing, no AI image service. They are part of this repository and under its MIT
+  license; the list is in [`apps/api/seed/images/CREDITS.md`](apps/api/seed/images/CREDITS.md). Redraw them with
+  `pnpm --filter @app/api seed:generate-art`. The recording above re-uploads one of them under a new title.
 
 ## License
 

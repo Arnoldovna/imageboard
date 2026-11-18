@@ -84,17 +84,17 @@ describe('document titles (F-53)', () => {
   it('leaves the image title to the dialog component', async () => {
     const router = testRouter();
     await router.push('/');
-    document.title = 'Rooftops from the fifth floor · Imageboard';
+    document.title = 'Tower at sunrise · Imageboard';
 
     await router.push('/images/16');
 
-    expect(document.title).toBe('Rooftops from the fifth floor · Imageboard');
+    expect(document.title).toBe('Tower at sunrise · Imageboard');
   });
 
   it('resets to "Imageboard" when the dialog closes', async () => {
     const router = testRouter();
     await router.push('/images/16');
-    document.title = 'Rooftops from the fifth floor · Imageboard';
+    document.title = 'Tower at sunrise · Imageboard';
 
     await router.push('/');
 

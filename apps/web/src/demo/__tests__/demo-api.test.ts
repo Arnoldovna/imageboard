@@ -42,11 +42,11 @@ describe('demo API: gallery', () => {
     const page = ImagePage.parse(await (await call('GET', '/api/images')).json());
 
     expect(page.items.map((image) => [image.id, image.title, image.canDelete])).toEqual([
-      [3, 'Second coffee, first idea', false],
-      [2, 'Last train already gone', false],
-      [1, 'Fog over the pines', false],
+      [3, 'Tulips on petrol', false],
+      [2, 'Lotus frieze', false],
+      [1, 'Iris on the axis', false],
     ]);
-    expect(page.items[0]?.previewUrl).toBe('/imageboard/assets/second-coffee.jpg');
+    expect(page.items[0]?.previewUrl).toBe('/imageboard/assets/tulips-on-petrol.jpg');
     expect(page.nextCursor).toBeNull();
   });
 
@@ -106,7 +106,7 @@ describe('demo API: gallery', () => {
   it('returns one image, 404 for an unknown id and 400 for an id that is not canonical (F-44)', async () => {
     const { call } = await demoHarness();
 
-    expect(ImageDto.parse(await (await call('GET', '/api/images/2')).json()).title).toBe('Last train already gone');
+    expect(ImageDto.parse(await (await call('GET', '/api/images/2')).json()).title).toBe('Lotus frieze');
 
     const missing = await call('GET', '/api/images/99');
     expect(missing.status).toBe(404);

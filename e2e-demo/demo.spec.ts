@@ -21,9 +21,9 @@ import {
 
 const DIST = join(import.meta.dirname, '..', 'apps', 'web', 'dist-demo');
 const BANNER_TEXT = 'Demo – Daten bleiben nur in deinem Browser';
-/** The newest and the oldest photo of the real seed. */
-const NEWEST_SEED_TITLE = 'Rooftops from the fifth floor';
-const OLDEST_SEED_TITLE = 'Fog over the pines';
+/** The newest and the oldest picture of the real seed. */
+const NEWEST_SEED_TITLE = 'Medallion with stars';
+const OLDEST_SEED_TITLE = 'Peacock';
 
 /** Every `/api` response the page sees; each must have come from the service worker, none from the network. */
 function recordApiResponses(page: Page): Response[] {
@@ -51,7 +51,7 @@ test.describe('live demo', () => {
     await expect(banner).toContainText(BANNER_TEXT);
     await expect(banner.getByRole('button', { name: 'reset demo', exact: true })).toBeVisible();
 
-    // The real seed: 16 photos, 12 per page, newest first; the seed photo decodes from the hashed asset.
+    // The real seed: 16 pictures, 12 per page, newest first; the seed picture decodes from the hashed asset.
     await expect(galleryRegion(page).getByRole('listitem')).toHaveCount(12);
     await expect(galleryRegion(page).getByRole('listitem').first().getByRole('link')).toHaveAccessibleName(
       NEWEST_SEED_TITLE,

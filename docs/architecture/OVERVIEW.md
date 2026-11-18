@@ -50,7 +50,7 @@ after round 1. An adversarial re-review found these contradictions and steps tha
 
 | Finding                                                                                                                                                                               | Resolution                                                                                                                                                                               | Where                                       |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Phase 0 told agents to install fnm, Node and brew git; PLAN.md says Phase 0 is done via `~/.devenv.sh` without system changes                                                         | Phase 0 = `source ~/.devenv.sh` (Node 26.13.1, pnpm 10.34.9 corepack shim, Apple Git 2.50); Playwright browsers installed once in 1a                                  | ADR 0021 §1, BUILD-ORDER Phase 0            |
+| Phase 0 told agents to install fnm, Node and brew git; PLAN.md says Phase 0 is done via `~/.devenv.sh` without system changes                                                         | Phase 0 = `source ~/.devenv.sh` (Node 26.13.1, pnpm 10.34.9 corepack shim, Apple Git 2.50); Playwright browsers installed once in 1a                                                     | ADR 0021 §1, BUILD-ORDER Phase 0            |
 | Integration harness used `imageboard_tpl`, `f_<uuid>`, clone per `createTestApp()` and allowed `TRUNCATE` (conventions §7: `<slug>_template`, setup file, no `TRUNCATE`)              | `imageboard_template`, `test/setup-database.ts` (`t_<random>` per file), `createTestDatabase()` for pristine blocks, no `TRUNCATE`; Redis prefix `test-<uuid>` for sessions and limiters | ADR 0015, 0017, 0021 §3, DATA-MODEL §5/§6.7 |
 | One working tree: every unit's integration app imports all modules, so a sibling's half-done `index.ts` turns everyone red                                                            | Swap `index.ts` last, saved files parse, stub cross-feature components in tests, sequential steps own their listed frozen files                                                          | ADR 0017, 0021 §2, BUILD-ORDER              |
 | E2E override appended `8181` to the base `8080` (Compose concatenates `ports`), so e2e collided with `pnpm demo`                                                                      | `ports: !override` for web, tmpfs mounts, `E2E_PORT` resolved once in `run-e2e.mjs`; template CI log/teardown steps removed                                                              | ADR 0015, 0021 §4, §16                      |
@@ -238,15 +238,15 @@ imageboard/
 │   ├── api/
 │   │   ├── Dockerfile                                   [S] multi-stage, pnpm deploy --prod, distroless nonroot
 │   │   ├── drizzle.config.ts                            [S] casing snake_case
-│   │   ├── package.json                                 [S] db:generate (builds @app/shared first), db:migrate, db:seed (SEED_ALLOW=true); 2.4 adds db:seed:check, seed:fetch-images, admin:remove-image
+│   │   ├── package.json                                 [S] db:generate (builds @app/shared first), db:migrate, db:seed (SEED_ALLOW=true); 2.4 adds db:seed:check, seed:generate-art, admin:remove-image
 │   │   ├── tsconfig.json · tsconfig.build.json          [S]
 │   │   ├── vitest.config.ts · vitest.integration.config.ts [S] integration include: src/**/*.int.test.ts + test/**/*.int.test.ts; setupFiles: test/setup-database.ts
 │   │   ├── drizzle/
 │   │   │   ├── 0000_init.sql                            [S] generated + reviewed (images, comments)
 │   │   │   └── meta/_journal.json · meta/0000_snapshot.json [S]
 │   │   ├── seed/
-│   │   │   ├── images/*.jpg                             [B] 16 photos, ≤ 1600 px long edge (fetched once, committed)
-│   │   │   ├── images/manifest.json                     [B] file → picsum id, author, source URL, licence, objectKey
+│   │   │   ├── images/*.jpg                             [B] 16 original artworks, ≤ 1600 px long edge (generated, committed)
+│   │   │   ├── images/manifest.json                     [B] slug → fixed objectKey
 │   │   │   └── images/CREDITS.md                        [B] human-readable attribution
 │   │   ├── src/
 │   │   │   ├── server.ts                                [S] loadEnv → logger → container → createApp → listen; graceful shutdown (shared/http/graceful-shutdown.ts)
@@ -321,9 +321,10 @@ imageboard/
 │   │   │       ├── seed.ts                              [B] runSeed({ db, upload, storage, logger }) idempotent, via upload.ingest with fixed keys; restores missing objects of seed rows
 │   │   │       ├── seed-cli.ts                          [S] stub in 1a → [B] 2.4: seedMode() guard (SEED_ALLOW=true, never NODE_ENV) → connections → runSeed; --check (read-only) verifies rows + objects
 │   │   │       ├── admin-remove-image.ts                [B] takedown: imagesModule.adminRemove(id), requires --yes (ADR 0019); compiled into the API image
-│   │   │       ├── script-runtime.ts                    [B] withScriptContext (env, logger, db, storage; always closed), createScriptUploadPort, runCli
+│   │   │       ├── script-runtime.ts                    [B] withScriptContext (env, logger, db, storage; always closed), createScriptUploadPort
+│   │   │       ├── script-cli.ts                        [B] cliArgs, runCli (no env/db imports; also for the offline art generator)
 │   │   │       ├── seed-content.ts                      [B] titles, names, descriptions, comments, dates (DATA-MODEL §6.4)
-│   │   │       └── fetch-seed-images.ts                 [B] one-off: Picsum ids → seed/images/*.jpg + manifest fields
+│   │   │       └── generate-seed-art.ts                 [B] draws seed-art/pieces.ts → seed/images/*.jpg + CREDITS
 │   │   └── test/
 │   │       ├── global-setup.ts                          [S] Postgres 18 + Redis 8 containers, migrated template DB imageboard_template, provide()
 │   │       ├── images.ts                                [S] Testcontainers images pinned by digest (postgres, redis, minio; same digests as compose)
@@ -902,7 +903,7 @@ their evidence in `scripts/traceability-allow.json`, which the script validates.
 | B-41 | `ORDER BY created_at DESC, id DESC` everywhere, keyset                                                                                                                                                 | `comments.repository.int.test.ts`                                                                                                             |
 | B-42 | `timestamptz(3) NOT NULL DEFAULT now()`, ISO 8601 UTC in DTOs                                                                                                                                          | migration review, DTO tests                                                                                                                   |
 | B-43 | CHECK constraints mirroring shared Zod (code points, the same explicit character classes, CRLF normalised), `text` not `varchar(n)`                                                                    | `db-constraints.int.test.ts` + `text.test.ts` on shared vectors                                                                               |
-| B-44 | self-hosted seed photos (Picsum/Unsplash licence, credited) uploaded to MinIO by `db:seed` (ADR 0014)                                                                                                  | `seed.int.test.ts`                                                                                                                            |
+| B-44 | self-hosted seed artwork (original, generated in the repo, MIT) uploaded to MinIO by `db:seed` (ADR 0014)                                                                                              | `seed.int.test.ts`                                                                                                                            |
 | B-45 | comments keyset pagination (20)                                                                                                                                                                        | `comments.routes.int.test.ts`                                                                                                                 |
 | B-46 | `nextCursor` from `limit + 1` fetch; button only when non-null; empty state                                                                                                                            | `images.routes.int.test.ts`, `GallerySection.test.ts`                                                                                         |
 | B-47 | router-driven state, no global listeners, store `remove(id)` without reload                                                                                                                            | `gallery.store.test.ts`, `e2e/delete.spec.ts` (scroll position kept)                                                                          |
@@ -1023,7 +1024,7 @@ cold starts and without strangers' uploads on anyone's infrastructure.
 - **Build**: `pnpm build:demo` runs `vite build --config vite.demo.config.ts --mode demo` in apps/web. The demo
   config extends `vite.config.ts` with `base: '/imageboard/'`, output `dist-demo/`, MSW's Vite plugin in
   `worker-only` mode (emits `mockServiceWorker.js` under the base), `demoSeedPlugin` (the virtual module
-  `virtual:demo-seed`, generated at build time from `apps/api/src/scripts/seed-content.ts` and the photos in
+  `virtual:demo-seed`, generated at build time from `apps/api/src/scripts/seed-content.ts` and the pictures in
   `apps/api/seed/images/`, so the demo always shows the real seed) and `spaFallbackPlugin` (copies `index.html` to
   `404.html`, because Pages has no rewrites). `scripts/check-bundle.mjs --demo` then checks worker, fallback and base.
 - **Switch**: `import.meta.env.MODE === 'demo'` in `main.ts` (start MSW before mounting) and `App.vue` (the banner).

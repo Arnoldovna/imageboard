@@ -1,6 +1,6 @@
 /**
  * Seed entry point (ADR 0014, DATA-MODEL §6):
- * - `pnpm db:seed` (sets SEED_ALLOW=true; run by `pnpm dev:setup` and `pnpm demo`) → `runSeed()`: 16 photos through
+ * - `pnpm db:seed` (sets SEED_ALLOW=true; run by `pnpm dev:setup` and `pnpm demo`) → `runSeed()`: 16 pictures through
  *   the upload pipeline into the configured bucket, rows and 60 comments into the configured database. Idempotent;
  *   a re-run also stores the objects of seed rows again whose original or preview is missing.
  * - `pnpm --filter @app/api db:seed:check` (`--check`, read-only, needs no switch) → `checkSeed()`: exits 1 unless all
@@ -10,7 +10,8 @@
  * NODE_ENV=production, so an explicit opt-in is the only reliable switch (conventions §8, ADR 0021 §5). `runSeed()`
  * itself has no guard, because tests call it with their own database and fake storage.
  */
-import { cliArgs, createScriptUploadPort, runCli, withScriptContext } from './script-runtime.js';
+import { cliArgs, runCli } from './script-cli.js';
+import { createScriptUploadPort, withScriptContext } from './script-runtime.js';
 import { checkSeed, runSeed } from './seed.js';
 
 type CliEnv = Readonly<Record<string, string | undefined>>;

@@ -14,7 +14,7 @@ const image: ImageDto = {
   height: 1067,
   mimeType: 'image/jpeg',
   authorName: 'Tomás R.',
-  title: 'Rooftops from the fifth floor',
+  title: 'Tower at sunrise',
   description: 'New flat, no lift, but this view makes the stairs bearable.',
   createdAt: '2026-11-12T19:23:00.000Z',
   canDelete: false,
@@ -203,7 +203,7 @@ describe('request: mutations', () => {
   it('sends FormData as multipart and lets the browser set the content type', async () => {
     const fetchMock = stubFetch(session('token-a'), json({ ...image, canDelete: true }, 201));
     const formData = new FormData();
-    formData.set('title', 'Rooftops from the fifth floor');
+    formData.set('title', 'Tower at sunrise');
 
     const created = await request('POST', '/api/images', { formData, schema: ImageDto });
 

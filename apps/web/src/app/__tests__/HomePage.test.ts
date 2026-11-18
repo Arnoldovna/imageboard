@@ -48,7 +48,7 @@ async function mountAt(path: string): Promise<VueWrapper> {
 beforeEach(() => {
   pinia = createPinia();
   setActivePinia(pinia);
-  stubApi([image(1, 'Harbour at dawn'), image(2, 'Fog over the pines')]);
+  stubApi([image(1, 'Harbour at dawn'), image(2, 'Iris on the axis')]);
 });
 
 afterEach(() => {
@@ -64,11 +64,11 @@ describe('HomePage wiring', () => {
     const gallery = useGalleryStore();
     gallery.prepend(image(1, 'Harbour at dawn'));
 
-    app.findComponent(UploadPanel).vm.$emit('uploaded', image(2, 'Fog over the pines'));
+    app.findComponent(UploadPanel).vm.$emit('uploaded', image(2, 'Iris on the axis'));
     await nextTick();
 
     expect(gallery.items.map((item) => item.id)).toEqual([2, 1]);
-    expect(app.findComponent(GallerySection).text()).toContain('Fog over the pines');
+    expect(app.findComponent(GallerySection).text()).toContain('Iris on the axis');
   });
 
   it('opens the upload form when the gallery asks for it (empty state, F-07)', async () => {
@@ -85,7 +85,7 @@ describe('HomePage wiring', () => {
   it('opens the detail dialog over the mounted gallery and removes a deleted image from it (F-37)', async () => {
     const gallery = useGalleryStore();
     gallery.prepend(image(1, 'Harbour at dawn'));
-    gallery.prepend(image(2, 'Fog over the pines'));
+    gallery.prepend(image(2, 'Iris on the axis'));
     const app = await mountAt('/');
 
     await router.push('/images/2');
@@ -103,7 +103,7 @@ describe('HomePage wiring', () => {
   it('returns focus to the tile of the image after the dialog closes (F-15)', async () => {
     const gallery = useGalleryStore();
     gallery.prepend(image(1, 'Harbour at dawn'));
-    gallery.prepend(image(2, 'Fog over the pines'));
+    gallery.prepend(image(2, 'Iris on the axis'));
     const app = await mountAt('/');
 
     await router.push('/images/1');

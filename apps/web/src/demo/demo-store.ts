@@ -36,7 +36,7 @@ export interface DemoSeed {
 export interface ImageRecord {
   id: number;
   ownerId: string;
-  /** The seed photo's asset URL; `null` for an upload, whose bytes are in the `files` store. */
+  /** The seed picture's asset URL; `null` for an upload, whose bytes are in the `files` store. */
   url: string | null;
   width: number;
   height: number;
@@ -104,6 +104,7 @@ const FILES = 'files';
 const META = 'meta';
 const ALL_STORES = [IMAGES, COMMENTS, FILES, META];
 const STATE_KEY = 'state';
+const SEED_KEY = 'seed';
 const BY_IMAGE = 'byImage';
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
@@ -162,8 +163,21 @@ async function readState(tx: IDBTransaction): Promise<DemoState> {
   return state;
 }
 
+/**
+ * FNV-1a over the seed's JSON. Stored next to the state, so a deploy with different seed content (new pictures mean new
+ * hashed asset URLs) replaces what an earlier visit stored instead of pointing at assets that no longer exist.
+ */
+export function seedFingerprint(seed: DemoSeed): string {
+  let hash = 0x811c9dc5;
+  for (const char of JSON.stringify(seed)) {
+    hash ^= char.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
 /** Clears every store and writes the seed: ids 1..n in upload order, like a fresh `pnpm db:seed`. */
-async function writeSeed(tx: IDBTransaction, seed: DemoSeed, ownerId: string): Promise<void> {
+async function writeSeed(tx: IDBTransaction, seed: DemoSeed, fingerprint: string, ownerId: string): Promise<void> {
   for (const name of ALL_STORES) await requestResult(tx.objectStore(name).clear());
   let nextImageId = 1;
   let nextCommentId = 1;
@@ -178,6 +192,7 @@ async function writeSeed(tx: IDBTransaction, seed: DemoSeed, ownerId: string): P
   }
   const state: DemoState = { ownerId, nextImageId, nextCommentId };
   await requestResult(tx.objectStore(META).put(state, STATE_KEY));
+  await requestResult(tx.objectStore(META).put(fingerprint, SEED_KEY));
 }
 
 function openDatabase(factory: IDBFactory): Promise<IDBDatabase> {
@@ -203,15 +218,25 @@ export interface OpenDemoStoreOptions {
    * later request of this tab would fail, so the browser passes a page reload here.
    */
   onClosedByNewerVersion?: () => void;
+  /**
+   * Called when this open replaced a seed that an earlier deploy had stored. Other tabs still show the old rows, so the
+   * browser tells them to reload, as after "reset demo".
+   */
+  onReseeded?: () => void;
 }
 
-/** Opens (and on first use seeds) the demo database. */
+/**
+ * Opens the demo database and seeds it on first use, and again when the seed differs from the one stored (a new
+ * deploy changed the demo content); that replaces the visitor's own uploads too, like "reset demo".
+ */
 export async function openDemoStore({
   seed,
   factory = indexedDB,
   newOwnerId = () => crypto.randomUUID(),
   onClosedByNewerVersion,
+  onReseeded,
 }: OpenDemoStoreOptions): Promise<DemoStore> {
+  const fingerprint = seedFingerprint(seed);
   const db = await openDatabase(factory);
   // Another tab upgrading the schema must not be blocked by this one; this tab then reloads into the new version.
   db.onversionchange = () => {
@@ -219,10 +244,15 @@ export async function openDemoStore({
     onClosedByNewerVersion?.();
   };
 
-  await inTransaction(db, ALL_STORES, 'readwrite', async (tx) => {
-    const existing: unknown = await requestResult(tx.objectStore(META).get(STATE_KEY));
-    if (existing === undefined) await writeSeed(tx, seed, newOwnerId());
+  // Seeded unless the stored fingerprint is this seed's. A database that had a state but another (or, from before
+  // fingerprints existed, no) fingerprint was seeded by an earlier deploy: other tabs must hear about the new one.
+  const replacedOldSeed = await inTransaction(db, ALL_STORES, 'readwrite', async (tx) => {
+    if ((await requestResult(tx.objectStore(META).get(SEED_KEY))) === fingerprint) return false;
+    const hadState = (await requestResult(tx.objectStore(META).get(STATE_KEY))) !== undefined;
+    await writeSeed(tx, seed, fingerprint, newOwnerId());
+    return hadState;
   });
+  if (replacedOldSeed) onReseeded?.();
 
   const read = <T>(stores: readonly string[], work: (tx: IDBTransaction) => Promise<T>) =>
     inTransaction(db, stores, 'readonly', work);
@@ -281,7 +311,7 @@ export async function openDemoStore({
       write([COMMENTS], async (tx) => {
         await requestResult(tx.objectStore(COMMENTS).delete(id));
       }),
-    reset: () => write(ALL_STORES, (tx) => writeSeed(tx, seed, newOwnerId())),
+    reset: () => write(ALL_STORES, (tx) => writeSeed(tx, seed, fingerprint, newOwnerId())),
     close: () => {
       db.close();
     },

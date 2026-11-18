@@ -9,6 +9,12 @@ let storePromise: Promise<DemoStore> | undefined;
 /** Tells the demo's other tabs that the data was reset, so they reload instead of showing rows that are gone. */
 const RESET_CHANNEL = 'imageboard-demo-reset';
 
+function tellOtherTabsToReload(): void {
+  const channel = new BroadcastChannel(RESET_CHANNEL);
+  channel.postMessage('reset');
+  channel.close();
+}
+
 /** Decodes an upload with the browser's own decoder; nothing leaves the page. */
 async function readImageSize(blob: Blob): Promise<ImageSize> {
   const bitmap = await createImageBitmap(blob);
@@ -22,7 +28,7 @@ async function readImageSize(blob: Blob): Promise<ImageSize> {
 /**
  * Opens the demo database (seeding it on the first visit) and starts Mock Service Worker before the app mounts, so
  * the very first `/api` request is already answered in the browser. Requests outside `/api` (assets, fonts, the seed
- * photos) pass through untouched.
+ * pictures) pass through untouched.
  */
 export async function startDemo(): Promise<void> {
   storePromise ??= openDemoStore({
@@ -30,6 +36,7 @@ export async function startDemo(): Promise<void> {
     onClosedByNewerVersion: () => {
       window.location.reload();
     },
+    onReseeded: tellOtherTabsToReload,
   });
   const store = await storePromise;
   new BroadcastChannel(RESET_CHANNEL).onmessage = () => {
@@ -51,8 +58,6 @@ export async function resetDemo(): Promise<void> {
   if (storePromise === undefined) throw new Error('The demo has not been started.');
   const store = await storePromise;
   await store.reset();
-  const channel = new BroadcastChannel(RESET_CHANNEL);
-  channel.postMessage('reset');
-  channel.close();
+  tellOtherTabsToReload();
   window.location.reload();
 }
